@@ -1,6 +1,0 @@
-{
-  "name": "Menú Digital & Pedidos WhatsApp",
-  "description": "Menú digital interactivo con categorías, búsqueda rápida, carrito con pedidos automáticos por WhatsApp y panel de administración.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
