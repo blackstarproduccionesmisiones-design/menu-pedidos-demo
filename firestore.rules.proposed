@@ -1,0 +1,25 @@
+// BORRADOR PARA REVISION. NO PUBLICAR HASTA PROBAR TODAS LAS FUNCIONES.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isNexoAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin'
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.activo == true;
+    }
+    match /usuarios/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      // Roles y cuentas no se modifican desde el cliente en esta etapa.
+      allow write: if false;
+    }
+    match /comercios/{comercioId} {
+      // Lectura pública de menú aún debe limitarse/ajustarse antes de producción.
+      allow read: if true;
+      allow write: if isNexoAdmin();
+    }
+    // El resto permanece cerrado hasta implementar y revisar la separación por comercio.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
