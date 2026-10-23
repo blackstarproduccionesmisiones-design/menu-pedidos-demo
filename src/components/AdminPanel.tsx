@@ -71,6 +71,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   // Category Editing state
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState('');
 
   // Store form state
   const [storeForm, setStoreForm] = useState<StoreInfo>(store);
@@ -157,6 +159,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     };
     onUpdateCategories([...categories, newCat]);
     setNewCategoryName('');
+  };
+
+  const handleStartEditCategory = (category: Category) => {
+    setEditingCategoryId(category.id);
+    setEditingCategoryName(category.name);
+  };
+
+  const handleSaveCategory = (catId: string) => {
+    const name = editingCategoryName.trim();
+    if (!name) return;
+    const updated = categories.map((category) =>
+      category.id === catId ? { ...category, name } : category
+    );
+    onUpdateCategories(updated);
+    setEditingCategoryId(null);
+    setEditingCategoryName('');
+  };
+
+  const handleCancelEditCategory = () => {
+    setEditingCategoryId(null);
+    setEditingCategoryName('');
   };
 
   const handleDeleteCategory = (catId: string, catName: string) => {
@@ -519,17 +542,65 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         <span className="w-6 h-6 rounded-full bg-stone-100 text-stone-500 text-xs font-bold flex items-center justify-center">
                           {idx + 1}
                         </span>
-                        <div>
-                          <span className="font-bold text-sm text-stone-900">
-                            {c.name}
-                          </span>
-                          <span className="text-xs text-stone-400 block">
-                            {count} {count === 1 ? 'artículo' : 'artículos'}
-                          </span>
+                        <div className="min-w-0 flex-1">
+                          {editingCategoryId === c.id ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                autoFocus
+                                value={editingCategoryName}
+                                onChange={(e) => setEditingCategoryName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveCategory(c.id);
+                                  if (e.key === 'Escape') handleCancelEditCategory();
+                                }}
+                                className="min-w-0 flex-1 bg-white border border-stone-300 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                aria-label="Nombre de la categoría"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveCategory(c.id)}
+                                disabled={!editingCategoryName.trim()}
+                                className="text-emerald-600 hover:bg-emerald-50 disabled:opacity-40 p-2 rounded-xl transition"
+                                title="Guardar nombre"
+                              >
+                                <Save size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEditCategory}
+                                className="text-stone-400 hover:bg-stone-100 p-2 rounded-xl transition"
+                                title="Cancelar edición"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="font-bold text-sm text-stone-900">
+                                {c.name}
+                              </span>
+                              <span className="text-xs text-stone-400 block">
+                                {count} {count === 1 ? 'artículo' : 'artículos'}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
 
+                      {editingCategoryId !== c.id && (
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditCategory(c)}
+                          className="text-stone-500 hover:text-red-600 p-2 rounded-xl hover:bg-red-50 transition"
+                          title="Editar categoría"
+                          aria-label={`Editar categoría ${c.name}`}
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                      )}
                       <button
+                        type="button"
                         onClick={() => handleDeleteCategory(c.id, c.name)}
                         className="text-stone-400 hover:text-rose-600 p-2 rounded-xl hover:bg-rose-50 transition"
                         title="Eliminar categoría"
