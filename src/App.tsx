@@ -17,7 +17,14 @@ import {
   saveNewOrder,
   resetAllToDefault,
 } from './utils/storage';
-import { saveProductsCloud, subscribeProductsCloud } from './utils/firestoreStorage';
+import {
+  saveProductsCloud,
+  subscribeProductsCloud,
+  saveCategoriesCloud,
+  subscribeCategoriesCloud,
+  saveStoreCloud,
+  subscribeStoreCloud,
+} from './utils/firestoreStorage';
 import { HeaderBanner } from './components/HeaderBanner';
 import { CategoryCarousel } from './components/CategoryCarousel';
 import { SearchBar } from './components/SearchBar';
@@ -53,6 +60,36 @@ export default function App() {
       return unsubscribe;
     } catch (error) {
       console.error('Error al sincronizar productos desde Firebase:', error);
+    }
+  }, []);
+
+  // Sincronizar categorías entre todos los dispositivos
+  useEffect(() => {
+    try {
+      const unsubscribe = subscribeCategoriesCloud((cloudCategories) => {
+        // Si todavía no hay categorías en la nube, conservar las locales/de demostración.
+        if (cloudCategories.length === 0) return;
+        setCategories(cloudCategories);
+        saveStoredCategories(cloudCategories);
+      });
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error al sincronizar categorías desde Firebase:', error);
+    }
+  }, []);
+
+  // Sincronizar la configuración del comercio entre todos los dispositivos
+  useEffect(() => {
+    try {
+      const unsubscribe = subscribeStoreCloud((cloudStore) => {
+        // Si aún no existe configuración en la nube, conservar la configuración local.
+        if (!cloudStore) return;
+        setStore(cloudStore);
+        saveStoredStoreInfo(cloudStore);
+      });
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error al sincronizar la configuración desde Firebase:', error);
     }
   }, []);
 
@@ -209,16 +246,30 @@ export default function App() {
     }
   };
 
-  const handleUpdateCategories = (newCategories: Category[]) => {
+  const handleUpdateCategories = async (newCategories: Category[]) => {
     setCategories(newCategories);
     saveStoredCategories(newCategories);
-    showToast('Categorías actualizadas');
+
+    try {
+      await saveCategoriesCloud(newCategories);
+      showToast('Categorías actualizadas y guardadas en la nube');
+    } catch (error) {
+      console.error('Error al guardar categorías en Firebase:', error);
+      showToast('Categorías guardadas localmente, pero no en la nube');
+    }
   };
 
-  const handleUpdateStore = (newStore: StoreInfo) => {
+  const handleUpdateStore = async (newStore: StoreInfo) => {
     setStore(newStore);
     saveStoredStoreInfo(newStore);
-    showToast('Configuración del comercio guardada');
+
+    try {
+      await saveStoreCloud(newStore);
+      showToast('Configuración guardada en la nube');
+    } catch (error) {
+      console.error('Error al guardar la configuración en Firebase:', error);
+      showToast('Configuración guardada localmente, pero no en la nube');
+    }
   };
 
   const handleResetDefaults = () => {
