@@ -17,7 +17,7 @@ import {
   saveNewOrder,
   resetAllToDefault,
 } from './utils/storage';
-import { saveProductsCloud } from './utils/firestoreStorage';
+import { saveProductsCloud, subscribeProductsCloud } from './utils/firestoreStorage';
 import { HeaderBanner } from './components/HeaderBanner';
 import { CategoryCarousel } from './components/CategoryCarousel';
 import { SearchBar } from './components/SearchBar';
@@ -40,6 +40,21 @@ export default function App() {
   const [categories, setCategories] = useState<Category[]>(getStoredCategories);
   const [products, setProducts] = useState<Product[]>(getStoredProducts);
   const [orders, setOrders] = useState<SavedOrder[]>(getStoredOrders);
+
+  // Sincronizar productos desde Firestore para que todos los dispositivos vean el mismo menú
+  useEffect(() => {
+    try {
+      const unsubscribe = subscribeProductsCloud((cloudProducts) => {
+        // Si todavía no hay productos en la nube, conservar los datos locales/de demostración.
+        if (cloudProducts.length === 0) return;
+        setProducts(cloudProducts);
+        saveStoredProducts(cloudProducts);
+      });
+      return unsubscribe;
+    } catch (error) {
+      console.error('Error al sincronizar productos desde Firebase:', error);
+    }
+  }, []);
 
   // Cart State
   const [cart, setCart] = useState<CartItem[]>([]);
