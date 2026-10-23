@@ -24,6 +24,7 @@ import {
   subscribeCategoriesCloud,
   saveStoreCloud,
   subscribeStoreCloud,
+  COMERCIO_ID,
 } from './utils/firestoreStorage';
 import { HeaderBanner } from './components/HeaderBanner';
 import { CategoryCarousel } from './components/CategoryCarousel';
@@ -175,6 +176,14 @@ export default function App() {
       if (profile.rol !== 'admin' || profile.activo !== true) {
         await signOut(firebaseAuth);
         setLoginError('Esta cuenta no tiene permisos de administrador NEXO+.');
+        return;
+      }
+
+      if (profile.comercioId !== COMERCIO_ID) {
+        await signOut(firebaseAuth);
+        setLoginError(
+          `Esta cuenta no está habilitada para administrar el comercio ${COMERCIO_ID}.`
+        );
         return;
       }
 
