@@ -27,10 +27,17 @@ export const MasterAdminPanel: React.FC<MasterAdminPanelProps> = ({ isOpen, onCl
     setNotice('');
     try {
       const snapshot = await getDocs(collection(firestore, 'comercios'));
-      const items = snapshot.docs.map((item) => {
-        const data = item.data();
-        return { id: item.id, name: String(data.nombre || data.name || data.nombreComercial || item.id) };
-      }).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      const items = snapshot.docs
+        .filter((item) => {
+          const data = item.data();
+          // Excluir perfiles de administrador que hayan quedado guardados por error en "comercios".
+          return data.rol !== 'admin' && data.rol !== 'admin_maestro';
+        })
+        .map((item) => {
+          const data = item.data();
+          return { id: item.id, name: String(data.nombre || data.name || data.nombreComercial || item.id) };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name, 'es'));
       setCommerces(items);
       if (items.length === 0) setNotice('Todavía no se encontraron comercios en la colección principal.');
     } catch (e) {
