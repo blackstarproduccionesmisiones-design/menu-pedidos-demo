@@ -22,7 +22,7 @@ function getCommerceId(): string {
   return /^[a-z0-9-]+$/.test(safeId) ? safeId : 'lodepichi';
 }
 
-const COMERCIO_ID = getCommerceId();
+export const COMERCIO_ID = getCommerceId();
 
 function getCommerceCollection(name: string) {
   if (!firestore) {
