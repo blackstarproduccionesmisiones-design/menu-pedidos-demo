@@ -12,7 +12,17 @@ import {
 import { firestore } from '../firebase';
 import type { Category, Product, SavedOrder, StoreInfo } from '../types';
 
-const COMERCIO_ID = 'lodepichi';
+// El comercio se selecciona desde la URL: ?comercio=alto-galeto
+// Si no se especifica, conservamos LO DE PICHI para no alterar el enlace existente.
+function getCommerceId(): string {
+  if (typeof window === 'undefined') return 'lodepichi';
+  const requested = new URLSearchParams(window.location.search).get('comercio');
+  if (!requested) return 'lodepichi';
+  const safeId = requested.toLowerCase().trim();
+  return /^[a-z0-9-]+$/.test(safeId) ? safeId : 'lodepichi';
+}
+
+const COMERCIO_ID = getCommerceId();
 
 function getCommerceCollection(name: string) {
   if (!firestore) {
