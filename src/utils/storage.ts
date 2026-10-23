@@ -1,11 +1,22 @@
 import { Category, Product, SavedOrder, StoreInfo } from '../types';
 import { DEFAULT_CATEGORIES, DEFAULT_PRODUCTS, DEFAULT_STORE_INFO } from '../data/defaultMenu';
 
+// Cada comercio usa claves locales independientes para evitar mezclar menús.
+function getCommerceId(): string {
+  if (typeof window === 'undefined') return 'lodepichi';
+  const requested = new URLSearchParams(window.location.search).get('comercio');
+  if (!requested) return 'lodepichi';
+  const safeId = requested.toLowerCase().trim();
+  return /^[a-z0-9-]+$/.test(safeId) ? safeId : 'lodepichi';
+}
+
+const COMERCIO_ID = getCommerceId();
+const PREFIX = `nexo_menu_${COMERCIO_ID}`;
 const KEYS = {
-  PRODUCTS: 'alto_galeto_products_v3',
-  CATEGORIES: 'alto_galeto_categories_v3',
-  STORE_INFO: 'alto_galeto_store_info_v3',
-  ORDERS: 'alto_galeto_saved_orders_v3',
+  PRODUCTS: `${PREFIX}_products_v1`,
+  CATEGORIES: `${PREFIX}_categories_v1`,
+  STORE_INFO: `${PREFIX}_store_info_v1`,
+  ORDERS: `${PREFIX}_saved_orders_v1`,
 };
 
 export function getStoredStoreInfo(): StoreInfo {
