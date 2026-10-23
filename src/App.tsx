@@ -34,6 +34,7 @@ import { ProductModal } from './components/ProductModal';
 import { CartDrawer } from './components/CartDrawer';
 import { FloatingCartButton } from './components/FloatingCartButton';
 import { AdminPanel } from './components/AdminPanel';
+import { MasterAdminPanel } from './components/MasterAdminPanel';
 import { Toast } from './components/Toast';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
@@ -114,6 +115,7 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
   const [loginBusy, setLoginBusy] = useState(false);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false);
   const [detectedTable, setDetectedTable] = useState<string | null>(null);
 
   // Read URL query parameters for table QR scans
@@ -173,13 +175,14 @@ export default function App() {
       }
 
       const profile = userDoc.data();
-      if (profile.rol !== 'admin' || profile.activo !== true) {
+      if ((profile.rol !== 'admin' && profile.rol !== 'admin_maestro') || profile.activo !== true) {
         await signOut(firebaseAuth);
         setLoginError('Esta cuenta no tiene permisos de administrador NEXO+.');
         return;
       }
 
-      if (profile.comercioId !== COMERCIO_ID) {
+      const masterAccess = profile.rol === 'admin_maestro';
+      if (!masterAccess && profile.comercioId !== COMERCIO_ID) {
         await signOut(firebaseAuth);
         setLoginError(
           `Esta cuenta no está habilitada para administrar el comercio ${COMERCIO_ID}.`
@@ -187,6 +190,7 @@ export default function App() {
         return;
       }
 
+      setIsMasterAdmin(masterAccess);
       setAdminEmail(credential.user.email ?? loginEmail.trim());
       setIsPinModalOpen(false);
       setIsAdminOpen(true);
@@ -237,6 +241,7 @@ export default function App() {
   const handleAdminLogout = async () => {
     if (firebaseAuth) await signOut(firebaseAuth);
     setAdminEmail(null);
+    setIsMasterAdmin(false);
     setIsAdminOpen(false);
     showToast('Sesión cerrada');
   };
@@ -574,6 +579,13 @@ export default function App() {
           </div>
         )}
 
+        {isMasterAdmin ? (
+          <MasterAdminPanel
+            isOpen={isAdminOpen}
+            onClose={() => setIsAdminOpen(false)}
+            onLogout={handleAdminLogout}
+          />
+        ) : (
         <AdminPanel
           isOpen={isAdminOpen}
           onClose={() => setIsAdminOpen(false)}
@@ -586,6 +598,7 @@ export default function App() {
           onUpdateStore={handleUpdateStore}
           onResetDefaults={handleResetDefaults}
         />
+        )}
 
         {isPinModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
