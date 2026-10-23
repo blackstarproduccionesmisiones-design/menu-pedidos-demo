@@ -16,6 +16,7 @@ import {
   saveNewOrder,
   resetAllToDefault,
 } from './utils/storage';
+import { saveProductsCloud } from './utils/firestoreStorage';
 import { HeaderBanner } from './components/HeaderBanner';
 import { CategoryCarousel } from './components/CategoryCarousel';
 import { SearchBar } from './components/SearchBar';
