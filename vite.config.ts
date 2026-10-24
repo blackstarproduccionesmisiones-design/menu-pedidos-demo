@@ -17,6 +17,7 @@ export default defineConfig(() => {
           name: 'NEXO - Menú Digital y Pedidos por WhatsApp',
           short_name: 'NEXO+',
           description: 'Menú digital y pedidos directos por WhatsApp.',
+          lang: 'es',
           theme_color: '#030712',
           background_color: '#ffffff',
           display: 'standalone',
