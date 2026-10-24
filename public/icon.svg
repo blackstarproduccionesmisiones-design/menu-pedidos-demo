@@ -1,38 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#dc2626"/>
-      <stop offset="100%" stop-color="#991b1b"/>
-    </linearGradient>
-    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fef08a"/>
-      <stop offset="50%" stop-color="#facc15"/>
-      <stop offset="100%" stop-color="#ca8a04"/>
-    </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.35"/>
-    </filter>
-  </defs>
-
-  <!-- Background Base -->
-  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
-  
-  <!-- Outer Gold Accent Ring -->
-  <circle cx="256" cy="256" r="216" fill="none" stroke="url(#goldGrad)" stroke-width="8" opacity="0.85"/>
-
-  <!-- Center Decorative Flame / Roast Grill Icon -->
-  <g filter="url(#shadow)">
-    <!-- Fire Flame Base -->
-    <path d="M256 80 C270 140 340 180 340 250 C340 310 295 360 256 360 C217 360 172 310 172 250 C172 195 220 150 256 80 Z" fill="url(#goldGrad)"/>
-    <!-- Inner Flame -->
-    <path d="M256 160 C265 200 300 230 300 270 C300 310 275 340 256 340 C237 340 212 310 212 270 C212 235 240 205 256 160 Z" fill="#ef4444"/>
-    <!-- Chef / Grill Fork & Spatula crossed -->
-    <path d="M190 280 L322 280 M210 260 L302 260 M230 300 L282 300" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
-  </g>
-
-  <!-- Store Text Banner -->
-  <g filter="url(#shadow)">
-    <rect x="76" y="380" width="360" height="64" rx="20" fill="#ffffff"/>
-    <text x="256" y="424" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="30" font-weight="900" fill="#991b1b" text-anchor="middle" letter-spacing="3">ALTO GALETO</text>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs><linearGradient id="nexo" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#00d5ed"/><stop offset="1" stop-color="#0647ff"/></linearGradient></defs>
+  <rect width="64" height="64" rx="14" fill="#030712"/>
+  <circle cx="32" cy="32" r="28" fill="none" stroke="url(#nexo)" stroke-width="3"/>
+  <path d="M10 18 Q32 2 52 18 Q58 24 51 31" fill="none" stroke="url(#nexo)" stroke-width="3" stroke-linecap="round"/>
+  <text x="30" y="39" font-family="Arial,sans-serif" font-size="19" font-weight="800" text-anchor="middle" fill="#fff">NEXO</text>
+  <rect x="47" y="42" width="11" height="4" rx="1.5" fill="#00d5ed"/><rect x="50.5" y="38.5" width="4" height="11" rx="1.5" fill="#00d5ed"/>
 </svg>
