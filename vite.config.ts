@@ -31,15 +31,10 @@ export default defineConfig(() => {
               purpose: 'any',
             },
             {
-              src: '/icon.svg',
+              src: '/icon-maskable.svg',
               sizes: 'any',
               type: 'image/svg+xml',
-              purpose: 'any',
-            },
-            {
-              src: '/icon.svg',
-              sizes: 'any',
-              type: 'image/svg+xml',
+              purpose: 'maskable',
             },
           ],
         },
