@@ -1,8 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <defs><linearGradient id="nexo" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#00d5ed"/><stop offset="1" stop-color="#0647ff"/></linearGradient></defs>
-  <rect width="64" height="64" rx="14" fill="#030712"/>
-  <circle cx="32" cy="32" r="28" fill="none" stroke="url(#nexo)" stroke-width="3"/>
-  <path d="M10 18 Q32 2 52 18 Q58 24 51 31" fill="none" stroke="url(#nexo)" stroke-width="3" stroke-linecap="round"/>
-  <text x="30" y="39" font-family="Arial,sans-serif" font-size="19" font-weight="800" text-anchor="middle" fill="#fff">NEXO</text>
-  <rect x="47" y="42" width="11" height="4" rx="1.5" fill="#00d5ed"/><rect x="50.5" y="38.5" width="4" height="11" rx="1.5" fill="#00d5ed"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs><linearGradient id="gold" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="#ffeb3b"/><stop offset="1" stop-color="#ffb300"/></linearGradient></defs>
+  <rect x="8" y="8" width="496" height="496" rx="92" fill="url(#gold)" stroke="#ffca00" stroke-width="12"/>
+  <circle cx="256" cy="112" r="27" fill="#050505"/>
+  <path d="M105 287a151 151 0 0 1 302 0Z" fill="#050505"/>
+  <path d="M133 272a123 123 0 0 1 69-91" fill="none" stroke="#ffdf24" stroke-width="16" stroke-linecap="round"/>
+  <rect x="84" y="300" width="344" height="30" rx="15" fill="#050505"/>
+  <text x="256" y="408" font-family="Arial,Helvetica,sans-serif" font-size="72" font-weight="900" text-anchor="middle" fill="#050505">MENU</text>
 </svg>
