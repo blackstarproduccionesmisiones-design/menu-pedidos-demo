@@ -43,56 +43,57 @@ import { doc, getDoc } from 'firebase/firestore';
 import { firebaseAuth, firestore, firebaseConfigured, firebaseConfigMissing } from './firebase';
 
 export default function App() {
-  // Application Data States
-  const [store, setStore] = useState<StoreInfo>(getStoredStoreInfo);
-  const [categories, setCategories] = useState<Category[]>(getStoredCategories);
-  const [products, setProducts] = useState<Product[]>(getStoredProducts);
-  const [orders, setOrders] = useState<SavedOrder[]>(getStoredOrders);
+  // El parámetro de la URL determina qué comercio se debe cargar.
+  const commerceId = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('comercio')?.trim() || 'lodepichi';
+  }, []);
+
+  // Datos locales aislados por comercio.
+  const [store, setStore] = useState<StoreInfo>(() => getStoredStoreInfo(commerceId));
+  const [categories, setCategories] = useState<Category[]>(() => getStoredCategories(commerceId));
+  const [products, setProducts] = useState<Product[]>(() => getStoredProducts(commerceId));
+  const [orders, setOrders] = useState<SavedOrder[]>(() => getStoredOrders(commerceId));
 
   // Sincronizar productos desde Firestore para que todos los dispositivos vean el mismo menú
   useEffect(() => {
     try {
       const unsubscribe = subscribeProductsCloud((cloudProducts) => {
-        // Si todavía no hay productos en la nube, conservar los datos locales/de demostración.
-        if (cloudProducts.length === 0) return;
         setProducts(cloudProducts);
-        saveStoredProducts(cloudProducts);
-      });
+        saveStoredProducts(cloudProducts, commerceId);
+      }, commerceId);
       return unsubscribe;
     } catch (error) {
       console.error('Error al sincronizar productos desde Firebase:', error);
     }
-  }, []);
+  }, [commerceId]);
 
   // Sincronizar categorías entre todos los dispositivos
   useEffect(() => {
     try {
       const unsubscribe = subscribeCategoriesCloud((cloudCategories) => {
-        // Si todavía no hay categorías en la nube, conservar las locales/de demostración.
-        if (cloudCategories.length === 0) return;
         setCategories(cloudCategories);
-        saveStoredCategories(cloudCategories);
-      });
+        saveStoredCategories(cloudCategories, commerceId);
+      }, commerceId);
       return unsubscribe;
     } catch (error) {
       console.error('Error al sincronizar categorías desde Firebase:', error);
     }
-  }, []);
+  }, [commerceId]);
 
   // Sincronizar la configuración del comercio entre todos los dispositivos
   useEffect(() => {
     try {
       const unsubscribe = subscribeStoreCloud((cloudStore) => {
-        // Si aún no existe configuración en la nube, conservar la configuración local.
         if (!cloudStore) return;
         setStore(cloudStore);
-        saveStoredStoreInfo(cloudStore);
-      });
+        saveStoredStoreInfo(cloudStore, commerceId);
+      }, commerceId);
       return unsubscribe;
     } catch (error) {
       console.error('Error al sincronizar la configuración desde Firebase:', error);
     }
-  }, []);
+  }, [commerceId]);
 
   // Cart State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -239,10 +240,10 @@ export default function App() {
   // Actualizar productos: respaldo local y guardado en Firestore
   const handleUpdateProducts = async (newProducts: Product[]) => {
     setProducts(newProducts);
-    saveStoredProducts(newProducts);
+    saveStoredProducts(newProducts, commerceId);
 
     try {
-      await saveProductsCloud(newProducts);
+      await saveProductsCloud(newProducts, commerceId);
       showToast('Menú actualizado y guardado en la nube');
     } catch (error) {
       console.error('Error al guardar productos en Firebase:', error);
@@ -252,10 +253,10 @@ export default function App() {
 
   const handleUpdateCategories = async (newCategories: Category[]) => {
     setCategories(newCategories);
-    saveStoredCategories(newCategories);
+    saveStoredCategories(newCategories, commerceId);
 
     try {
-      await saveCategoriesCloud(newCategories);
+      await saveCategoriesCloud(newCategories, commerceId);
       showToast('Categorías actualizadas y guardadas en la nube');
     } catch (error) {
       console.error('Error al guardar categorías en Firebase:', error);
@@ -265,10 +266,10 @@ export default function App() {
 
   const handleUpdateStore = async (newStore: StoreInfo) => {
     setStore(newStore);
-    saveStoredStoreInfo(newStore);
+    saveStoredStoreInfo(newStore, commerceId);
 
     try {
-      await saveStoreCloud(newStore);
+      await saveStoreCloud(newStore, commerceId);
       showToast('Configuración guardada en la nube');
     } catch (error) {
       console.error('Error al guardar la configuración en Firebase:', error);
@@ -277,7 +278,7 @@ export default function App() {
   };
 
   const handleResetDefaults = () => {
-    const defaults = resetAllToDefault();
+    const defaults = resetAllToDefault(commerceId);
     setProducts(defaults.products);
     setCategories(defaults.categories);
     setStore(defaults.storeInfo);
@@ -343,7 +344,7 @@ export default function App() {
       orderType: orderData.orderType,
       whatsappUrl: orderData.whatsappUrl,
     };
-    saveNewOrder(newOrd);
+    saveNewOrder(newOrd, commerceId);
     setOrders((prev) => [newOrd, ...prev]);
     showToast('¡Pedido enviado por WhatsApp!');
   };
