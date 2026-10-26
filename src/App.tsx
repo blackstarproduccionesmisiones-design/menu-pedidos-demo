@@ -172,7 +172,7 @@ export default function App() {
       }
 
       const profile = userDoc.data();
-      if (profile.rol !== 'admin' || profile.activo !== true) {
+      if (!['admin', 'admin_maestro'].includes(profile.rol) || profile.activo !== true) {
         await signOut(firebaseAuth);
         setLoginError('Esta cuenta no tiene permisos de administrador NEXO+.');
         return;
