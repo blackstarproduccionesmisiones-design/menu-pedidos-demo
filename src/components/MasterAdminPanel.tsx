@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ExternalLink, RefreshCw, Store, X, ShieldCheck, Plus, Pencil, Save, Ban } from 'lucide-react';
+import { ExternalLink, RefreshCw, Store, X, ShieldCheck, Plus, Pencil, Save, Ban, Copy, Check } from 'lucide-react';
 import { firebaseAuth } from '../firebase';
 
 type Commerce = { id: string; nombre: string; activo: boolean };
@@ -19,6 +19,7 @@ export const MasterAdminPanel: React.FC<MasterAdminPanelProps> = ({ isOpen, onCl
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [id, setId] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const request = async (method: 'GET' | 'POST' | 'PATCH', body?: Record<string, string>) => {
     if (!firebaseAuth?.currentUser) throw new Error('Tu sesión no está disponible. Volvé a ingresar.');
@@ -59,6 +60,19 @@ export const MasterAdminPanel: React.FC<MasterAdminPanelProps> = ({ isOpen, onCl
   if (!isOpen) return null;
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
+
+  const menuUrl = (commerceId: string) => baseUrl + '?comercio=' + encodeURIComponent(commerceId);
+
+  const copyMenuUrl = async (commerceId: string) => {
+    const url = menuUrl(commerceId);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(commerceId);
+      window.setTimeout(() => setCopiedId((current) => current === commerceId ? null : current), 2000);
+    } catch {
+      setError('No se pudo copiar el enlace automáticamente. Abrí el menú y copiá la dirección desde el navegador.');
+    }
+  };
 
   const startCreate = () => {
     setEditingId(null);
@@ -166,11 +180,16 @@ export const MasterAdminPanel: React.FC<MasterAdminPanelProps> = ({ isOpen, onCl
                     <h4 className="truncate font-extrabold text-stone-900">{commerce.nombre}</h4>
                     <p className="break-all text-xs text-stone-500">ID: {commerce.id}</p>
                     <p className="text-xs font-semibold text-emerald-700">{commerce.activo ? 'Registrado' : 'Inactivo'}</p>
+                    <p className="mt-2 text-xs font-bold text-stone-600">Enlace para compartir</p>
+                    <p className="break-all rounded-lg bg-stone-50 p-2 text-xs text-blue-700">{menuUrl(commerce.id)}</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => startEdit(commerce)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-3 py-2 text-xs font-bold text-stone-700 hover:border-red-300 hover:text-red-700"><Pencil size={14} /> Editar</button>
-                  <a href={baseUrl + '?comercio=' + encodeURIComponent(commerce.id)} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-stone-200 px-3 py-2 text-xs font-bold text-stone-700 hover:border-red-300 hover:text-red-700">
+                  <button onClick={() => void copyMenuUrl(commerce.id)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-stone-200 px-3 py-2 text-xs font-bold text-stone-700 hover:border-red-300 hover:text-red-700">
+                    {copiedId === commerce.id ? <Check size={14} /> : <Copy size={14} />}{copiedId === commerce.id ? 'Enlace copiado' : 'Copiar enlace'}
+                  </button>
+                  <a href={menuUrl(commerce.id)} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-stone-200 px-3 py-2 text-xs font-bold text-stone-700 hover:border-red-300 hover:text-red-700">
                     Abrir menú <ExternalLink size={14} />
                   </a>
                 </div>
