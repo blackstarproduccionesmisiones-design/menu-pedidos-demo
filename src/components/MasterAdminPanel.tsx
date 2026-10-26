@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ExternalLink, RefreshCw, Store, X, ShieldCheck, Plus, Pencil, Save, Ban, Copy, Check } from 'lucide-react';
 import { firebaseAuth } from '../firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 
 type Commerce = { id: string; nombre: string; activo: boolean };
 
@@ -20,6 +21,8 @@ export const MasterAdminPanel: React.FC<MasterAdminPanelProps> = ({ isOpen, onCl
   const [name, setName] = useState('');
   const [id, setId] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [ownerEmails, setOwnerEmails] = useState<Record<string, string>>({});
+  const [assigningId, setAssigningId] = useState<string | null>(null);
 
   const request = async (method: 'GET' | 'POST' | 'PATCH', body?: Record<string, string>) => {
     if (!firebaseAuth?.currentUser) throw new Error('Tu sesión no está disponible. Volvé a ingresar.');
@@ -35,6 +38,39 @@ export const MasterAdminPanel: React.FC<MasterAdminPanelProps> = ({ isOpen, onCl
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || 'No se pudo completar la operación.');
     return result;
+  };
+
+  const assignOwner = async (commerce: Commerce) => {
+    const email = (ownerEmails[commerce.id] || '').trim().toLowerCase();
+    if (!email) {
+      setError('Ingresá el correo del propietario.');
+      return;
+    }
+    if (!firebaseAuth?.currentUser) {
+      setError('Tu sesión no está disponible. Volvé a ingresar.');
+      return;
+    }
+    setAssigningId(commerce.id);
+    setError('');
+    setNotice('');
+    try {
+      const token = await firebaseAuth.currentUser.getIdToken();
+      const response = await fetch('/api/master/assign-owner', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commerceId: commerce.id, email }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'No se pudo asignar el propietario.');
+      await sendPasswordResetEmail(firebaseAuth, email);
+      setNotice(`Propietario asignado a ${commerce.nombre}. Se envió un correo a ${email} para que establezca su contraseña.`);
+      setOwnerEmails((current) => ({ ...current, [commerce.id]: '' }));
+    } catch (e: any) {
+      console.error('Error al asignar propietario:', e);
+      setError(e?.code === 'auth/invalid-email' ? 'El correo no es válido.' : (e?.message || 'No se pudo asignar el propietario.'));
+    } finally {
+      setAssigningId(null);
+    }
   };
 
   const loadCommerces = async () => {
@@ -131,7 +167,7 @@ export const MasterAdminPanel: React.FC<MasterAdminPanelProps> = ({ isOpen, onCl
 
         <div className="space-y-5 p-5 sm:p-7">
           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-            <strong>Gestión de comercios.</strong> Desde aquí podés registrar comercios nuevos y editar sus nombres. La administración de usuarios se agregará en una etapa separada.
+            <strong>Gestión de comercios.</strong> Podés registrar comercios, editar sus nombres y asignar un propietario a cada uno. El propietario recibirá un correo para establecer su contraseña.
           </div>
 
           {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
@@ -184,7 +220,13 @@ export const MasterAdminPanel: React.FC<MasterAdminPanelProps> = ({ isOpen, onCl
                     <p className="break-all rounded-lg bg-stone-50 p-2 text-xs text-blue-700">{menuUrl(commerce.id)}</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-2 sm:w-64 sm:shrink-0">
+                  <label className="text-xs font-bold text-stone-600">
+                    Correo del propietario
+                    <input type="email" value={ownerEmails[commerce.id] || ''} onChange={(e) => setOwnerEmails((current) => ({ ...current, [commerce.id]: e.target.value }))} placeholder="propietario@correo.com" className="mt-1 w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs font-normal text-stone-900 outline-none focus:border-red-500" />
+                  </label>
+                  <button onClick={() => void assignOwner(commerce)} disabled={assigningId === commerce.id || busy || !commerce.activo} className="rounded-xl bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800 disabled:opacity-50">{assigningId === commerce.id ? 'Asignando…' : 'Asignar propietario'}</button>
+                  <div className="flex flex-wrap gap-2">
                   <button onClick={() => startEdit(commerce)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-stone-200 px-3 py-2 text-xs font-bold text-stone-700 hover:border-red-300 hover:text-red-700"><Pencil size={14} /> Editar</button>
                   <button onClick={() => void copyMenuUrl(commerce.id)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-stone-200 px-3 py-2 text-xs font-bold text-stone-700 hover:border-red-300 hover:text-red-700">
                     {copiedId === commerce.id ? <Check size={14} /> : <Copy size={14} />}{copiedId === commerce.id ? 'Enlace copiado' : 'Copiar enlace'}
@@ -192,6 +234,7 @@ export const MasterAdminPanel: React.FC<MasterAdminPanelProps> = ({ isOpen, onCl
                   <a href={menuUrl(commerce.id)} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-stone-200 px-3 py-2 text-xs font-bold text-stone-700 hover:border-red-300 hover:text-red-700">
                     Abrir menú <ExternalLink size={14} />
                   </a>
+                  </div>
                 </div>
               </article>
             ))}
