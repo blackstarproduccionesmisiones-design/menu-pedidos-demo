@@ -59,6 +59,8 @@ export default function App() {
   useEffect(() => {
     try {
       const unsubscribe = subscribeProductsCloud((cloudProducts) => {
+        // No reemplazar datos locales si este comercio todavía no tiene productos en la nube.
+        if (cloudProducts.length === 0) return;
         setProducts(cloudProducts);
         saveStoredProducts(cloudProducts, commerceId);
       }, commerceId);
@@ -72,6 +74,8 @@ export default function App() {
   useEffect(() => {
     try {
       const unsubscribe = subscribeCategoriesCloud((cloudCategories) => {
+        // No reemplazar datos locales si este comercio todavía no tiene categorías en la nube.
+        if (cloudCategories.length === 0) return;
         setCategories(cloudCategories);
         saveStoredCategories(cloudCategories, commerceId);
       }, commerceId);
