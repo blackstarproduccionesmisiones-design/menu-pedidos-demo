@@ -24,6 +24,8 @@ export interface StoreInfo {
   logoUrl: string;
   coverUrl: string;
   phone: string; // WhatsApp phone e.g. "5491123456789"
+  whatsappUrl?: string;
+  instagramUrl?: string;
   currencySymbol: string;
   currencyCode: string;
   isOpen: boolean;
