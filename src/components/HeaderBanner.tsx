@@ -90,7 +90,7 @@ export const HeaderBanner: React.FC<HeaderBannerProps> = ({
           </div>
 
           {/* Name & Subtitle: "ALTO GALETO" */}
-          <div className="pt-2 sm:pt-3 flex-1 min-w-0">
+          <div className="pt-12 sm:pt-14 flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
               <h1 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight truncate">
                 {store.name}
