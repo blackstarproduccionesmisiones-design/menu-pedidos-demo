@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StoreInfo } from '../types';
 import { STORE_SCHEDULE_DETAILS } from '../data/defaultMenu';
 import { formatPrice } from '../utils/formatters';
-import { Clock, MapPin, Phone, Info, X, ShieldCheck, Calendar } from 'lucide-react';
+import { Clock, MapPin, Phone, Info, X, ShieldCheck, Calendar, Instagram, MessageCircle } from 'lucide-react';
 
 interface HeaderBannerProps {
   store: StoreInfo;
@@ -119,6 +119,20 @@ export const HeaderBanner: React.FC<HeaderBannerProps> = ({
                 Ver Horarios
               </button>
             </div>
+            {(store.whatsappUrl || store.instagramUrl) && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {store.whatsappUrl && (
+                  <a href={store.whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label="Contactar por WhatsApp" className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700">
+                    <MessageCircle size={16} /> WhatsApp
+                  </a>
+                )}
+                {store.instagramUrl && (
+                  <a href={store.instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Visitar Instagram" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition opacity-95 hover:opacity-100">
+                    <Instagram size={16} /> Instagram
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
