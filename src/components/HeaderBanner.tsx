@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StoreInfo } from '../types';
 import { STORE_SCHEDULE_DETAILS } from '../data/defaultMenu';
 import { formatPrice } from '../utils/formatters';
-import { Clock, MapPin, Phone, Info, X, ShieldCheck, Calendar } from 'lucide-react';
+import { Clock, MapPin, Phone, Info, X, ShieldCheck, Calendar, Instagram, MessageCircle } from 'lucide-react';
 
 interface HeaderBannerProps {
   store: StoreInfo;
@@ -90,16 +90,18 @@ export const HeaderBanner: React.FC<HeaderBannerProps> = ({
           </div>
 
           {/* Name & Subtitle: "ALTO GALETO" */}
-          <div className="pt-2 sm:pt-3 flex-1 min-w-0">
+          <div className="pt-12 sm:pt-14 flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2">
               <h1 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight truncate">
                 {store.name}
               </h1>
             </div>
 
-            <p className="text-xs sm:text-sm font-semibold text-red-600 truncate mt-0.5">
-              {store.tagline}
-            </p>
+            {store.tagline?.trim() && (
+              <p className="text-xs sm:text-sm font-semibold text-red-600 mt-0.5">
+                {store.tagline}
+              </p>
+            )}
 
             <div className="flex flex-wrap items-center gap-y-1 gap-x-3 mt-2 text-xs text-stone-600">
               <span className="flex items-center gap-1 text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
@@ -119,6 +121,20 @@ export const HeaderBanner: React.FC<HeaderBannerProps> = ({
                 Ver Horarios
               </button>
             </div>
+            {(store.whatsappUrl || store.instagramUrl) && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {store.whatsappUrl && (
+                  <a href={store.whatsappUrl} target="_blank" rel="noopener noreferrer" aria-label="Contactar por WhatsApp" className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700">
+                    <MessageCircle size={16} /> WhatsApp
+                  </a>
+                )}
+                {store.instagramUrl && (
+                  <a href={store.instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Visitar Instagram" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition opacity-95 hover:opacity-100">
+                    <Instagram size={16} /> Instagram
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
