@@ -812,6 +812,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
             </div>
 
+            {/* Social media contact links */}
+            <div className="space-y-3 rounded-2xl border border-stone-200 bg-stone-50 p-4">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-800">Redes sociales y contacto</h4>
+                <p className="mt-1 text-xs text-stone-500">Pegá los enlaces de contacto del comercio. Los íconos aparecerán debajo de los datos del negocio.</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-stone-700">Enlace de WhatsApp</label>
+                <input type="url" value={storeForm.whatsappUrl || ''} onChange={(e) => setStoreForm({ ...storeForm, whatsappUrl: e.target.value })} placeholder="https://wa.me/549376..." className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs sm:text-sm" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-stone-700">Perfil de Instagram</label>
+                <input type="url" value={storeForm.instagramUrl || ''} onChange={(e) => setStoreForm({ ...storeForm, instagramUrl: e.target.value })} placeholder="https://www.instagram.com/tucomercio/" className="w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs sm:text-sm" />
+              </div>
+            </div>
+
             {/* Cover & Logo URLs */}
             <div className="space-y-3">
               <div>
