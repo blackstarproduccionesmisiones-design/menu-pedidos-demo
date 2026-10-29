@@ -97,9 +97,11 @@ export const HeaderBanner: React.FC<HeaderBannerProps> = ({
               </h1>
             </div>
 
-            <p className="text-xs sm:text-sm font-semibold text-red-600 truncate mt-0.5">
-              {store.tagline}
-            </p>
+            {store.tagline?.trim() && (
+              <p className="text-xs sm:text-sm font-semibold text-red-600 mt-0.5">
+                {store.tagline}
+              </p>
+            )}
 
             <div className="flex flex-wrap items-center gap-y-1 gap-x-3 mt-2 text-xs text-stone-600">
               <span className="flex items-center gap-1 text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
