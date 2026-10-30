@@ -59,7 +59,6 @@ export default async function handler(req: any, res: any) {
       folder,
       public_id: publicId,
       timestamp,
-      upload_preset: 'nexo_menu_images',
     };
     const signatureBase = Object.keys(params)
       .sort()
@@ -73,7 +72,6 @@ export default async function handler(req: any, res: any) {
       timestamp,
       folder,
       publicId,
-      uploadPreset: 'nexo_menu_images',
       signature,
     });
   } catch (error: any) {
