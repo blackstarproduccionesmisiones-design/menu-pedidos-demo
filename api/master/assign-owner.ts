@@ -83,7 +83,7 @@ export default async function handler(req: any, res: any) {
 
     await userRef.set({
       rol: 'admin',
-      comercioId,
+      comercioId: commerceId,
       activo: true,
       email,
       ...(userSnapshot.exists && currentProfile?.createdAt ? {} : { createdAt: FieldValue.serverTimestamp() }),
