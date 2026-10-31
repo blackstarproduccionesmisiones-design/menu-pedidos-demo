@@ -10,6 +10,16 @@
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#ffc400" />
+    <link rel="manifest" id="app-manifest" href="/api/manifest?comercio=lodepichi" />
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var commerceId = (params.get('comercio') || 'lodepichi').trim().toLowerCase();
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(commerceId)) commerceId = 'lodepichi';
+        document.getElementById('app-manifest').href =
+          '/api/manifest?comercio=' + encodeURIComponent(commerceId);
+      })();
+    </script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
