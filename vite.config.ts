@@ -12,33 +12,7 @@ export default defineConfig(() => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'icon.svg', 'icon-maskable.svg'],
-        manifest: {
-          id: '/',
-          name: 'Menú Digital',
-          short_name: 'Menu',
-          description: 'Menú digital y pedidos directos por WhatsApp.',
-          lang: 'es',
-          theme_color: '#ffc400',
-          background_color: '#ffdf24',
-          display: 'standalone',
-          orientation: 'portrait-primary',
-          start_url: '/',
-          scope: '/',
-          icons: [
-            {
-              src: '/icon.svg',
-              sizes: 'any',
-              type: 'image/svg+xml',
-              purpose: 'any',
-            },
-            {
-              src: '/icon-maskable.svg',
-              sizes: 'any',
-              type: 'image/svg+xml',
-              purpose: 'maskable',
-            },
-          ],
-        },
+        manifest: false,
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           runtimeCaching: [
