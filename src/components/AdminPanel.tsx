@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { getIdToken } from 'firebase/auth';
+import { firebaseAuth } from '../firebase';
 import { ImageUploader } from './ImageUploader';
 import { Category, Product, SavedOrder, StoreInfo } from '../types';
 import { formatPrice } from '../utils/formatters';
@@ -40,9 +42,7 @@ interface AdminPanelProps {
   categories: Category[];
   store: StoreInfo;
   orders: SavedOrder[];
-  onUpdateProducts: (products: Product[]) => void;
-  onUpdateCategories: (categories: Category[]) => void;
-  onUpdateStore: (store: StoreInfo) => void;
+  onSaveCommerce: (products: Product[], categories: Category[], store: StoreInfo) => Promise<void>;
   onResetDefaults: () => void;
 }
 
@@ -54,9 +54,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   categories,
   store,
   orders,
-  onUpdateProducts,
-  onUpdateCategories,
-  onUpdateStore,
+  onSaveCommerce,
   onResetDefaults,
 }) => {
   const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'store' | 'orders' | 'qr'>('products');
@@ -71,6 +69,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Product Editing state
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isNewProduct, setIsNewProduct] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [saveProductError, setSaveProductError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
+  const [savingPriceIds, setSavingPriceIds] = useState<string[]>([]);
+  const [priceSaveError, setPriceSaveError] = useState<string | null>(null);
 
   // Category Editing state
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -80,6 +85,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Store form state
   const [storeForm, setStoreForm] = useState<StoreInfo>(store);
   const [storeSavedNotification, setStoreSavedNotification] = useState(false);
+  const [pendingProducts, setPendingProducts] = useState<Product[] | null>(null);
+  const [pendingCategories, setPendingCategories] = useState<Category[] | null>(null);
+  const [saveCommerceError, setSaveCommerceError] = useState<string | null>(null);
+  const [isSavingCommerce, setIsSavingCommerce] = useState(false);
+  const currentProducts = pendingProducts ?? products;
+  const currentCategories = pendingCategories ?? categories;
 
   if (!isOpen) return null;
 
@@ -98,31 +109,47 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   // Handlers for products
   const handleToggleProductAvailability = (productId: string) => {
-    const updated = products.map((p) =>
+    const updated = currentProducts.map((p) =>
       p.id === productId ? { ...p, isAvailable: !p.isAvailable } : p
     );
-    onUpdateProducts(updated);
+    setPendingProducts(updated);
   };
 
   const handleInlinePriceChange = (productId: string, newPriceStr: string) => {
-    const val = parseFloat(newPriceStr);
-    if (!isNaN(val) && val >= 0) {
-      const updated = products.map((p) =>
-        p.id === productId ? { ...p, price: val } : p
-      );
-      onUpdateProducts(updated);
+    const val = Number(newPriceStr);
+    if (!Number.isFinite(val) || val < 0) {
+      setPriceSaveError('Ingresá un precio válido para guardar.');
+      return;
     }
+    const currentProduct = currentProducts.find((p) => p.id === productId);
+    if (!currentProduct || currentProduct.price === val) {
+      setPriceDrafts((current) => {
+        const next = { ...current };
+        delete next[productId];
+        return next;
+      });
+      return;
+    }
+    setPendingProducts(currentProducts.map((p) =>
+      p.id === productId ? { ...p, price: val } : p
+    ));
+    setPriceSaveError(null);
+    setPriceDrafts((current) => {
+      const next = { ...current };
+      delete next[productId];
+      return next;
+    });
   };
 
   const handleDeleteProduct = (productId: string, name: string) => {
     if (window.confirm(`¿Estás seguro de eliminar "${name}" del menú?`)) {
-      const updated = products.filter((p) => p.id !== productId);
-      onUpdateProducts(updated);
+      const updated = currentProducts.filter((p) => p.id !== productId);
+      setPendingProducts(updated);
     }
   };
 
   const handleStartCreateProduct = () => {
-    const firstCat = categories[0]?.id || 'cat_default';
+    const firstCat = currentCategories[0]?.id || 'cat_default';
     setEditingProduct({
       id: `prod_${Date.now()}`,
       name: '',
@@ -138,18 +165,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setIsNewProduct(true);
   };
 
-  const handleSaveProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct || !editingProduct.name.trim()) return;
+    if (!editingProduct || !editingProduct.name.trim() || isSavingProduct || savingPriceIds.length > 0) return;
 
-    if (isNewProduct) {
-      onUpdateProducts([...products, editingProduct]);
-    } else {
-      onUpdateProducts(
-        products.map((p) => (p.id === editingProduct.id ? editingProduct : p))
-      );
-    }
+    setIsSavingProduct(true);
+    setSaveProductError(null);
+
+    const updatedProducts = isNewProduct
+      ? [...currentProducts, editingProduct]
+      : currentProducts.map((p) => (p.id === editingProduct.id ? editingProduct : p));
+    setPendingProducts(updatedProducts);
+    setPriceDrafts((current) => {
+      const next = { ...current };
+      delete next[editingProduct.id];
+      return next;
+    });
     setEditingProduct(null);
+    setIsSavingProduct(false);
   };
 
   // Handlers for categories
@@ -158,9 +191,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     const newCat: Category = {
       id: `cat_${Date.now()}`,
       name: newCategoryName.trim(),
-      order: categories.length + 1,
+      order: currentCategories.length + 1,
     };
-    onUpdateCategories([...categories, newCat]);
+    setPendingCategories([...currentCategories, newCat]);
     setNewCategoryName('');
   };
 
@@ -172,10 +205,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const handleSaveCategory = (catId: string) => {
     const name = editingCategoryName.trim();
     if (!name) return;
-    const updated = categories.map((category) =>
+    const updated = currentCategories.map((category) =>
       category.id === catId ? { ...category, name } : category
     );
-    onUpdateCategories(updated);
+    setPendingCategories(updated);
     setEditingCategoryId(null);
     setEditingCategoryName('');
   };
@@ -186,7 +219,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   const handleDeleteCategory = (catId: string, catName: string) => {
-    const hasItems = products.some((p) => p.categoryId === catId);
+    const hasItems = currentProducts.some((p) => p.categoryId === catId);
     if (
       hasItems &&
       !window.confirm(
@@ -195,15 +228,37 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     ) {
       return;
     }
-    onUpdateCategories(categories.filter((c) => c.id !== catId));
+    setPendingCategories(currentCategories.filter((c) => c.id !== catId));
   };
 
-  // Save store settings
-  const handleSaveStore = (e: React.FormEvent) => {
-    e.preventDefault();
-    onUpdateStore(storeForm);
-    setStoreSavedNotification(true);
-    setTimeout(() => setStoreSavedNotification(false), 2500);
+  // Save the complete commerce configuration and catalog together.
+  const handleSaveStore = async (e?: React.FormEvent | React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
+    if (isSavingCommerce) return;
+
+    // Validar explícitamente solo los campos realmente obligatorios.
+    // Las URL opcionales no deben bloquear el submit por validación nativa del navegador.
+    if (!storeForm.name.trim() || !storeForm.phone.trim() || !storeForm.currencySymbol.trim()) {
+      setStoreSavedNotification(false);
+      setSaveCommerceError('Completá el nombre del comercio, el WhatsApp y el símbolo de moneda.');
+      return;
+    }
+
+    setStoreSavedNotification(false);
+    setIsSavingCommerce(true);
+    try {
+      await onSaveCommerce(currentProducts, currentCategories, storeForm);
+      setPendingProducts(null);
+      setPendingCategories(null);
+      setSaveCommerceError(null);
+      setStoreSavedNotification(true);
+    } catch (error) {
+      console.error('No se pudieron guardar los cambios del comercio:', error);
+      setStoreSavedNotification(false);
+      setSaveCommerceError(error instanceof Error ? error.message : 'No se pudieron guardar los cambios. Revisá la conexión e intentá nuevamente.');
+    } finally {
+      setIsSavingCommerce(false);
+    }
   };
 
   const handleExportBackup = () => {
@@ -212,7 +267,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       exportDate: new Date().toISOString(),
       store: storeForm,
       categories,
-      products,
+      products: currentProducts,
+      categories: currentCategories,
     };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -232,11 +288,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         const json = JSON.parse(event.target?.result as string);
         if (json.products && json.categories && json.store) {
           if (window.confirm('¿Deseas restaurar este menú? Reemplazará los productos, categorías y configuración actuales.')) {
-            onUpdateProducts(json.products);
-            onUpdateCategories(json.categories);
-            onUpdateStore(json.store);
+            setPendingProducts(json.products);
+            setPendingCategories(json.categories);
             setStoreForm(json.store);
-            alert('¡Menú restaurado exitosamente!');
+            setSaveCommerceError(null);
+            alert('Copia cargada en el administrador. Para aplicarla, pulsá "Guardar Cambios del Comercio".');
           }
         } else {
           alert('El archivo no tiene el formato válido de copia de seguridad.');
@@ -250,7 +306,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   // Filtered products list
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = currentProducts.filter((p) => {
     const matchCat = filterCategory === 'all' || p.categoryId === filterCategory;
     const matchSearch =
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -290,6 +346,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         <div className="bg-stone-100 border-b border-stone-200 px-4 flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0">
           <button
             onClick={() => setActiveTab('products')}
+            disabled={savingPriceIds.length > 0}
             className={`py-3 px-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
               activeTab === 'products'
                 ? 'border-red-600 text-red-600 bg-white shadow-xs rounded-t-xl'
@@ -297,11 +354,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             }`}
           >
             <Utensils size={16} />
-            <span>Artículos & Precios ({products.length})</span>
+            <span>Artículos & Precios ({currentProducts.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('categories')}
+            disabled={savingPriceIds.length > 0}
             className={`py-3 px-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
               activeTab === 'categories'
                 ? 'border-red-600 text-red-600 bg-white shadow-xs rounded-t-xl'
@@ -309,11 +367,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             }`}
           >
             <Layers size={16} />
-            <span>Categorías ({categories.length})</span>
+            <span>Categorías ({currentCategories.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('store')}
+            disabled={savingPriceIds.length > 0}
             className={`py-3 px-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
               activeTab === 'store'
                 ? 'border-red-600 text-red-600 bg-white shadow-xs rounded-t-xl'
@@ -326,6 +385,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             onClick={() => setActiveTab('orders')}
+            disabled={savingPriceIds.length > 0}
             className={`py-3 px-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
               activeTab === 'orders'
                 ? 'border-red-600 text-red-600 bg-white shadow-xs rounded-t-xl'
@@ -338,6 +398,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             onClick={() => setActiveTab('qr')}
+            disabled={savingPriceIds.length > 0}
             className={`py-3 px-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
               activeTab === 'qr'
                 ? 'border-red-600 text-red-600 bg-white shadow-xs rounded-t-xl'
@@ -369,7 +430,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   className="bg-stone-50 border border-stone-300 px-3 py-1.5 rounded-xl text-xs sm:text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
                   <option value="all">Todas las categorías</option>
-                  {categories.map((c) => (
+                  {currentCategories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>
@@ -379,12 +440,71 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
               <button
                 onClick={handleStartCreateProduct}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-xs transition"
+                disabled={savingPriceIds.length > 0}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-xs transition"
               >
                 <Plus size={16} />
                 <span>Agregar Artículo</span>
               </button>
             </div>
+
+            {savingPriceIds.length > 0 && (
+              <div role="status" className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                Guardando el precio en la nube… Esperá a que termine antes de cambiar de sección.
+              </div>
+            )}
+
+            {priceSaveError && (
+              <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                {priceSaveError}
+              </div>
+            )}
+
+            {(pendingProducts !== null || pendingCategories !== null) && (
+              <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                Tenés cambios de productos o categorías pendientes. Podés guardarlos directamente desde acá.
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-stone-200 bg-white p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-xs text-stone-600">
+                Guardá los productos, precios, disponibilidad y categorías modificados.
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleSaveStore()}
+                disabled={isSavingCommerce}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white font-bold px-5 py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md transition"
+              >
+                <Save size={16} />
+                <span>
+                  {isSavingCommerce
+                    ? 'Guardando…'
+                    : saveCommerceError
+                      ? 'Error al guardar ✕'
+                      : storeSavedNotification
+                        ? 'Cambios guardados ✓'
+                        : 'Guardar Cambios'}
+                </span>
+              </button>
+            </div>
+
+            {isSavingCommerce && (
+              <div role="status" aria-live="polite" className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                Guardando el catálogo y los datos del comercio en la nube…
+              </div>
+            )}
+            {saveCommerceError && (
+              <div role="alert" aria-live="assertive" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                <span className="font-extrabold">No se pudieron guardar los cambios.</span> {saveCommerceError}
+                <span className="block mt-1">Tus cambios pendientes siguen en el administrador. Volvé a intentarlo.</span>
+              </div>
+            )}
+            {storeSavedNotification && !isSavingCommerce && !saveCommerceError && (
+              <div role="status" aria-live="polite" className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                <Check size={15} className="inline mr-1" /> Los productos, precios, categorías y datos del comercio se guardaron correctamente.
+              </div>
+            )}
 
             {/* Quick helper tip */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-800 flex items-center gap-2">
@@ -403,7 +523,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               ) : (
                 filteredProducts.map((p) => {
-                  const catName = categories.find((c) => c.id === p.categoryId)?.name || 'Sin categoría';
+                  const catName = currentCategories.find((c) => c.id === p.categoryId)?.name || 'Sin categoría';
                   return (
                     <div
                       key={p.id}
@@ -445,20 +565,36 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           </span>
                           <input
                             type="number"
-                            step="0.5"
+                            step="any"
                             min="0"
-                            defaultValue={p.price}
-                            onBlur={(e) =>
-                              handleInlinePriceChange(p.id, e.target.value)
+                            value={priceDrafts[p.id] ?? String(p.price)}
+                            disabled={savingPriceIds.length > 0}
+                            onChange={(e) =>
+                              setPriceDrafts((current) => ({
+                                ...current,
+                                [p.id]: e.target.value,
+                              }))
                             }
-                            className="w-16 text-xs sm:text-sm font-extrabold text-red-600 focus:outline-none"
-                            title="Precio actual"
+                            onBlur={(e) => {
+                              const draft = priceDrafts[p.id];
+                              if (draft !== undefined && draft !== String(p.price)) {
+                                void handleInlinePriceChange(p.id, e.currentTarget.value);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.currentTarget.blur();
+                              }
+                            }}
+                            className="w-16 text-xs sm:text-sm font-extrabold text-red-600 focus:outline-none disabled:opacity-60"
+                            title={savingPriceIds.includes(p.id) ? 'Guardando precio…' : 'El precio se guarda al salir del campo'}
                           />
                         </div>
 
                         {/* Availability toggle */}
                         <button
                           onClick={() => handleToggleProductAvailability(p.id)}
+                          disabled={savingPriceIds.length > 0}
                           className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl border transition ${
                             p.isAvailable
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -480,15 +616,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             onClick={() => {
                               setEditingProduct(p);
                               setIsNewProduct(false);
+                              setSaveProductError(null);
                             }}
-                            className="p-1.5 rounded-xl text-stone-500 hover:text-stone-900 hover:bg-stone-200 transition"
+                            disabled={savingPriceIds.length > 0}
+                            className="p-1.5 rounded-xl text-stone-500 hover:text-stone-900 hover:bg-stone-200 disabled:opacity-40 transition"
                             title="Editar detalles completos"
                           >
                             <Edit2 size={16} />
                           </button>
                           <button
                             onClick={() => handleDeleteProduct(p.id, p.name)}
-                            className="p-1.5 rounded-xl text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                            disabled={savingPriceIds.length > 0}
+                            className="p-1.5 rounded-xl text-stone-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 transition"
                             title="Eliminar del menú"
                           >
                             <Trash2 size={16} />
@@ -531,11 +670,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-stone-500 uppercase tracking-wider">
-                Categorías activas ({categories.length})
+                Categorías activas ({currentCategories.length})
               </h4>
               <div className="divide-y divide-stone-200 bg-stone-50 rounded-2xl border border-stone-200 overflow-hidden">
-                {categories.map((c, idx) => {
-                  const count = products.filter((p) => p.categoryId === c.id).length;
+                {currentCategories.map((c, idx) => {
+                  const count = currentProducts.filter((p) => p.categoryId === c.id).length;
                   return (
                     <div
                       key={c.id}
@@ -621,13 +760,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* Tab 3: Store & WhatsApp Configuration */}
         {activeTab === 'store' && (
           <form
+            noValidate
             onSubmit={handleSaveStore}
             className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5"
           >
             {storeSavedNotification && (
-              <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-sm font-semibold flex items-center gap-2">
+              <div role="status" className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-sm font-semibold flex items-center gap-2">
                 <Check size={18} />
-                <span>¡Configuración del negocio guardada con éxito!</span>
+                <span>¡Catálogo, categorías y datos del comercio guardados correctamente!</span>
+              </div>
+            )}
+            {saveCommerceError && (
+              <div role="alert" className="p-3 bg-rose-50 border border-rose-300 text-rose-800 rounded-xl text-sm font-semibold">
+                {saveCommerceError}
               </div>
             )}
 
@@ -659,24 +804,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   }
                   className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-stone-700 mb-1">
-                  Dirección del comercio
-                </label>
-                <input
-                  type="text"
-                  value={storeForm.address || ''}
-                  onChange={(e) =>
-                    setStoreForm({ ...storeForm, address: e.target.value })
-                  }
-                  placeholder="Ej: Av. Mitre 1234, Posadas"
-                  className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-                <span className="text-[11px] text-stone-500 mt-0.5 block">
-                  Esta dirección se mostrará en el menú público y en la ventana de información.
-                </span>
               </div>
 
               <div>
@@ -855,20 +982,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <label className="block text-xs font-bold text-stone-700 mb-1">
                   Foto de portada del comercio
                 </label>
-                <ImageUploader
-                  commerceId={commerceId}
-                  kind="cover"
-                  currentUrl={storeForm.coverUrl}
-                  onUploaded={(url) => setStoreForm({ ...storeForm, coverUrl: url })}
+                <ImageUploader commerceId={commerceId} kind="cover" currentUrl={storeForm.coverUrl} onUploaded={(url) => setStoreForm({ ...storeForm, coverUrl: url })} />
+                <details className="mt-2"><summary className="cursor-pointer text-[11px] text-stone-500">Ingresar una URL manualmente</summary>
+                <input
+                  type="url"
+                  value={storeForm.coverUrl}
+                  onChange={(e) =>
+                    setStoreForm({ ...storeForm, coverUrl: e.target.value })
+                  }
+                  className="mt-2 w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-xs sm:text-sm"
                 />
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-[11px] text-stone-500">Ingresar una URL manualmente</summary>
-                  <input
-                    type="url"
-                    value={storeForm.coverUrl}
-                    onChange={(e) => setStoreForm({ ...storeForm, coverUrl: e.target.value })}
-                    className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs sm:text-sm"
-                  />
                 </details>
               </div>
 
@@ -876,20 +999,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <label className="block text-xs font-bold text-stone-700 mb-1">
                   Logo del comercio
                 </label>
-                <ImageUploader
-                  commerceId={commerceId}
-                  kind="logo"
-                  currentUrl={storeForm.logoUrl}
-                  onUploaded={(url) => setStoreForm({ ...storeForm, logoUrl: url })}
+                <ImageUploader commerceId={commerceId} kind="logo" currentUrl={storeForm.logoUrl} onUploaded={(url) => setStoreForm({ ...storeForm, logoUrl: url })} />
+                <details className="mt-2"><summary className="cursor-pointer text-[11px] text-stone-500">Ingresar una URL manualmente</summary>
+                <input
+                  type="url"
+                  value={storeForm.logoUrl}
+                  onChange={(e) =>
+                    setStoreForm({ ...storeForm, logoUrl: e.target.value })
+                  }
+                  className="mt-2 w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-xs sm:text-sm"
                 />
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-[11px] text-stone-500">Ingresar una URL manualmente</summary>
-                  <input
-                    type="url"
-                    value={storeForm.logoUrl}
-                    onChange={(e) => setStoreForm({ ...storeForm, logoUrl: e.target.value })}
-                    className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs sm:text-sm"
-                  />
                 </details>
               </div>
 
@@ -962,13 +1081,40 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </button>
 
               <button
-                type="submit"
-                className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-md transition"
+                type="button"
+                onClick={() => void handleSaveStore()}
+                disabled={isSavingCommerce}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white font-bold px-6 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-md transition"
               >
                 <Save size={16} />
-                <span>Guardar Cambios del Comercio</span>
+                <span>
+                  {isSavingCommerce
+                    ? 'Guardando…'
+                    : saveCommerceError
+                      ? 'Error al guardar ✕'
+                      : storeSavedNotification
+                        ? 'Cambios guardados ✓'
+                        : 'Guardar Cambios del Comercio'}
+                </span>
               </button>
             </div>
+
+            {isSavingCommerce && (
+              <div role="status" aria-live="polite" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                Guardando los datos del comercio y el catálogo en la nube…
+              </div>
+            )}
+            {saveCommerceError && (
+              <div role="alert" aria-live="assertive" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                <span className="font-extrabold">No se pudieron guardar los cambios.</span> {saveCommerceError}
+                <span className="block mt-1">Revisá la conexión y volvé a intentarlo. Tus cambios pendientes siguen en el administrador.</span>
+              </div>
+            )}
+            {storeSavedNotification && !isSavingCommerce && !saveCommerceError && (
+              <div role="status" aria-live="polite" className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                <Check size={15} className="inline mr-1" /> Los cambios del comercio, productos y categorías se guardaron correctamente en la nube.
+              </div>
+            )}
           </form>
         )}
 
@@ -1372,7 +1518,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       }
                       className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
-                      {categories.map((c) => (
+                      {currentCategories.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
                         </option>
@@ -1406,7 +1552,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </label>
                   <input
                     type="number"
-                    step="100"
+                    step="any"
                     min="0"
                     required
                     value={editingProduct.price}
@@ -1439,27 +1585,86 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   />
                 </div>
 
-                {/* Image URL with quick presets */}
+                {/* Upload image directly or paste an image URL */}
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">
-                    Foto del producto
+                    Subir imagen desde el dispositivo
                   </label>
-                  <ImageUploader
-                    commerceId={commerceId}
-                    kind="product"
-                    currentUrl={editingProduct.imageUrl}
-                    onUploaded={(url) => setEditingProduct({ ...editingProduct, imageUrl: url })}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={isUploadingImage}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setImageUploadError(null);
+                      if (file.size > 3 * 1024 * 1024) {
+                        setImageUploadError('La imagen no debe superar los 3 MB.');
+                        e.target.value = '';
+                        return;
+                      }
+                      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+                        setImageUploadError('Elegí una imagen JPG, PNG o WEBP.');
+                        e.target.value = '';
+                        return;
+                      }
+                      if (!firebaseAuth?.currentUser) {
+                        setImageUploadError('La sesión no está disponible. Volvé a ingresar al administrador.');
+                        e.target.value = '';
+                        return;
+                      }
+                      setIsUploadingImage(true);
+                      try {
+                        const token = await getIdToken(firebaseAuth.currentUser);
+                        const reader = new FileReader();
+                        const dataUrl = await new Promise<string>((resolve, reject) => {
+                          reader.onload = () => resolve(String(reader.result || ''));
+                          reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+                          reader.readAsDataURL(file);
+                        });
+                        const requestedCommerce = new URLSearchParams(window.location.search).get('comercio') || 'lodepichi';
+                        const safeCommerce = /^[a-z0-9-]+$/.test(requestedCommerce.toLowerCase()) ? requestedCommerce.toLowerCase() : 'lodepichi';
+                        const response = await fetch('/api/upload-image', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({ commerceId: safeCommerce, image: dataUrl }),
+                        });
+                        const result = await response.json();
+                        if (!response.ok || !result.imageUrl) throw new Error(result.error || 'No se pudo subir la imagen.');
+                        setEditingProduct((current) => current ? { ...current, imageUrl: result.imageUrl } : current);
+                      } catch (error: any) {
+                        setImageUploadError(error?.message || 'No se pudo subir la imagen.');
+                      } finally {
+                        setIsUploadingImage(false);
+                        e.target.value = '';
+                      }
+                    }}
+                    className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-xs sm:text-sm"
                   />
-                  <details className="mt-2">
-                    <summary className="cursor-pointer text-[11px] text-stone-500">Ingresar una URL manualmente</summary>
-                    <input
-                      type="url"
-                      required
-                      value={editingProduct.imageUrl}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, imageUrl: e.target.value })}
-                      className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-3 py-2 text-xs sm:text-sm"
-                    />
-                  </details>
+                  <p className="text-[11px] text-stone-500 mt-1">JPG, PNG o WEBP · Máximo 3 MB. La imagen se alojará automáticamente.</p>
+                  {isUploadingImage && <p className="text-xs text-blue-700 mt-2 font-semibold">Subiendo imagen...</p>}
+                  {imageUploadError && <p className="text-xs text-red-600 mt-2">{imageUploadError}</p>}
+                  {editingProduct.imageUrl && (
+                    <img src={editingProduct.imageUrl} alt="Vista previa" className="mt-2 w-24 h-24 rounded-xl object-cover border border-stone-200" />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                    O pegá una URL de imagen
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    value={editingProduct.imageUrl}
+                    onChange={(e) =>
+                      setEditingProduct({
+                        ...editingProduct,
+                        imageUrl: e.target.value,
+                      })
+                    }
+                    className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-xs sm:text-sm"
+                  />
 
                   {/* Preset quick image picks */}
                   <div className="mt-2">
@@ -1524,6 +1729,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </label>
                 </div>
 
+                {saveProductError && (
+                  <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                    {saveProductError}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-200">
                   <button
                     type="button"
@@ -1534,9 +1745,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </button>
                   <button
                     type="submit"
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2 rounded-xl text-xs sm:text-sm shadow-md transition"
+                    disabled={isSavingProduct || savingPriceIds.length > 0}
+                    className="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white font-bold px-5 py-2 rounded-xl text-xs sm:text-sm shadow-md transition"
                   >
-                    Guardar Artículo
+                    {isSavingProduct ? 'Guardando…' : savingPriceIds.length > 0 ? 'Esperando guardado…' : 'Guardar Artículo'}
                   </button>
                 </div>
               </form>
