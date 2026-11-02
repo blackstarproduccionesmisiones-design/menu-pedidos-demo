@@ -20,7 +20,7 @@ export default async function handler(req: any, res: any) {
 
   try {
     const authorization = req.headers.authorization || '';
-    const match = /^Bearer\\s+(.+)$/i.exec(authorization);
+    const match = /^Bearer\s+(.+)$/i.exec(authorization);
     if (!match) return res.status(401).json({ error: 'Sesión requerida.' });
 
     const commerceId = typeof req.body?.commerceId === 'string' ? req.body.commerceId : '';
@@ -28,8 +28,8 @@ export default async function handler(req: any, res: any) {
     if (!/^[a-z0-9-]{1,60}$/.test(commerceId)) {
       return res.status(400).json({ error: 'Comercio inválido.' });
     }
-    if (!/^data:image\\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(image) || image.length > 7_000_000) {
-      return res.status(400).json({ error: 'La imagen debe ser JPG, PNG o WEBP y no superar 5 MB.' });
+    if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(image) || image.length > 4_200_000) {
+      return res.status(400).json({ error: 'La imagen debe ser JPG, PNG o WEBP y no superar 3 MB.' });
     }
 
     const { auth, db } = getAdminServices();
