@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { getIdToken } from 'firebase/auth';
+import { firebaseAuth } from '../firebase';
 import { Category, Product, SavedOrder, StoreInfo } from '../types';
 import { formatPrice } from '../utils/formatters';
 import {
@@ -66,6 +68,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [saveProductError, setSaveProductError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
   const [savingPriceIds, setSavingPriceIds] = useState<string[]>([]);
   const [priceSaveError, setPriceSaveError] = useState<string | null>(null);
@@ -1572,10 +1576,73 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   />
                 </div>
 
-                {/* Image URL with quick presets */}
+                {/* Upload image directly or paste an image URL */}
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1">
-                    URL de la Imagen
+                    Subir imagen desde el dispositivo
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={isUploadingImage}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setImageUploadError(null);
+                      if (file.size > 5 * 1024 * 1024) {
+                        setImageUploadError('La imagen no debe superar los 5 MB.');
+                        e.target.value = '';
+                        return;
+                      }
+                      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+                        setImageUploadError('Elegí una imagen JPG, PNG o WEBP.');
+                        e.target.value = '';
+                        return;
+                      }
+                      if (!firebaseAuth?.currentUser) {
+                        setImageUploadError('La sesión no está disponible. Volvé a ingresar al administrador.');
+                        e.target.value = '';
+                        return;
+                      }
+                      setIsUploadingImage(true);
+                      try {
+                        const token = await getIdToken(firebaseAuth.currentUser);
+                        const reader = new FileReader();
+                        const dataUrl = await new Promise<string>((resolve, reject) => {
+                          reader.onload = () => resolve(String(reader.result || ''));
+                          reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+                          reader.readAsDataURL(file);
+                        });
+                        const requestedCommerce = new URLSearchParams(window.location.search).get('comercio') || 'lodepichi';
+                        const safeCommerce = /^[a-z0-9-]+$/.test(requestedCommerce.toLowerCase()) ? requestedCommerce.toLowerCase() : 'lodepichi';
+                        const response = await fetch('/api/upload-image', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({ commerceId: safeCommerce, image: dataUrl }),
+                        });
+                        const result = await response.json();
+                        if (!response.ok || !result.imageUrl) throw new Error(result.error || 'No se pudo subir la imagen.');
+                        setEditingProduct((current) => current ? { ...current, imageUrl: result.imageUrl } : current);
+                      } catch (error: any) {
+                        setImageUploadError(error?.message || 'No se pudo subir la imagen.');
+                      } finally {
+                        setIsUploadingImage(false);
+                        e.target.value = '';
+                      }
+                    }}
+                    className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-xs sm:text-sm"
+                  />
+                  <p className="text-[11px] text-stone-500 mt-1">JPG, PNG o WEBP · Máximo 5 MB. La imagen se alojará automáticamente.</p>
+                  {isUploadingImage && <p className="text-xs text-blue-700 mt-2 font-semibold">Subiendo imagen...</p>}
+                  {imageUploadError && <p className="text-xs text-red-600 mt-2">{imageUploadError}</p>}
+                  {editingProduct.imageUrl && (
+                    <img src={editingProduct.imageUrl} alt="Vista previa" className="mt-2 w-24 h-24 rounded-xl object-cover border border-stone-200" />
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1">
+                    O pegá una URL de imagen
                   </label>
                   <input
                     type="url"
