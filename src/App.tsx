@@ -269,7 +269,8 @@ export default function App() {
       showToast('Menú actualizado y guardado en la nube');
     } catch (error) {
       console.error('Error al guardar productos en Firebase:', error);
-      showToast('Menú guardado localmente, pero no en la nube');
+      showToast('No se pudo guardar el menú en la nube');
+      throw error;
     }
   };
 
