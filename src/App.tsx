@@ -23,6 +23,7 @@ import {
   saveCategoriesCloud,
   subscribeCategoriesCloud,
   saveStoreCloud,
+  saveCommerceCloud,
   subscribeStoreCloud,
   COMERCIO_ID,
 } from './utils/firestoreStorage';
@@ -284,6 +285,27 @@ export default function App() {
     } catch (error) {
       console.error('Error al guardar categorías en Firebase:', error);
       showToast('Categorías guardadas localmente, pero no en la nube');
+    }
+  };
+
+  const handleSaveCommerce = async (
+    newProducts: Product[],
+    newCategories: Category[],
+    newStore: StoreInfo
+  ) => {
+    try {
+      await saveCommerceCloud(newProducts, newCategories, newStore);
+      setProducts(newProducts);
+      setCategories(newCategories);
+      setStore(newStore);
+      saveStoredProducts(newProducts);
+      saveStoredCategories(newCategories);
+      saveStoredStoreInfo(newStore);
+      showToast('Catálogo y datos del comercio guardados en la nube');
+    } catch (error) {
+      console.error('Error al guardar el comercio completo en Firebase:', error);
+      showToast('No se pudieron guardar los cambios del comercio');
+      throw error;
     }
   };
 
@@ -607,9 +629,7 @@ export default function App() {
           categories={categories}
           store={store}
           orders={orders}
-          onUpdateProducts={handleUpdateProducts}
-          onUpdateCategories={handleUpdateCategories}
-          onUpdateStore={handleUpdateStore}
+          onSaveCommerce={handleSaveCommerce}
           onResetDefaults={handleResetDefaults}
         />
         )}
