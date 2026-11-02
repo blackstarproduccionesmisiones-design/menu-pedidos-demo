@@ -455,9 +455,50 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             {(pendingProducts !== null || pendingCategories !== null) && (
               <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-                Tenés cambios de productos pendientes. Para guardarlos en la nube, entrá en "Datos del Negocio & WhatsApp" y pulsá "Guardar Cambios del Comercio".
+                Tenés cambios de productos o categorías pendientes. Podés guardarlos directamente desde acá.
               </div>
             )}
+
+            <div className="rounded-2xl border border-stone-200 bg-white p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="text-xs text-stone-600">
+                Guardá los productos, precios, disponibilidad y categorías modificados.
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleSaveStore()}
+                disabled={isSavingCommerce}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white font-bold px-5 py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 shadow-md transition"
+              >
+                <Save size={16} />
+                <span>
+                  {isSavingCommerce
+                    ? 'Guardando…'
+                    : saveCommerceError
+                      ? 'Error al guardar ✕'
+                      : storeSavedNotification
+                        ? 'Cambios guardados ✓'
+                        : 'Guardar Cambios'}
+                </span>
+              </button>
+            </div>
+
+            {isSavingCommerce && (
+              <div role="status" aria-live="polite" className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                Guardando el catálogo y los datos del comercio en la nube…
+              </div>
+            )}
+            {saveCommerceError && (
+              <div role="alert" aria-live="assertive" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                <span className="font-extrabold">No se pudieron guardar los cambios.</span> {saveCommerceError}
+                <span className="block mt-1">Tus cambios pendientes siguen en el administrador. Volvé a intentarlo.</span>
+              </div>
+            )}
+            {storeSavedNotification && !isSavingCommerce && !saveCommerceError && (
+              <div role="status" aria-live="polite" className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                <Check size={15} className="inline mr-1" /> Los productos, precios, categorías y datos del comercio se guardaron correctamente.
+              </div>
+            )}
+
             {/* Quick helper tip */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-800 flex items-center gap-2">
               <AlertCircle size={15} className="shrink-0 text-amber-600" />
