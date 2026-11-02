@@ -70,6 +70,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [saveProductError, setSaveProductError] = useState<string | null>(null);
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
+  const [savingPriceIds, setSavingPriceIds] = useState<string[]>([]);
+  const [priceSaveError, setPriceSaveError] = useState<string | null>(null);
 
   // Category Editing state
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -103,13 +106,45 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     onUpdateProducts(updated);
   };
 
-  const handleInlinePriceChange = (productId: string, newPriceStr: string) => {
-    const val = parseFloat(newPriceStr);
-    if (!isNaN(val) && val >= 0) {
-      const updated = products.map((p) =>
-        p.id === productId ? { ...p, price: val } : p
+  const handleInlinePriceChange = async (productId: string, newPriceStr: string) => {
+    const val = Number(newPriceStr);
+    if (!Number.isFinite(val) || val < 0) {
+      setPriceSaveError('Ingresá un precio válido para guardar.');
+      return;
+    }
+
+    const currentProduct = products.find((p) => p.id === productId);
+    if (!currentProduct || currentProduct.price === val) {
+      setPriceDrafts((current) => {
+        const next = { ...current };
+        delete next[productId];
+        return next;
+      });
+      return;
+    }
+
+    setSavingPriceIds((current) => [...new Set([...current, productId])]);
+    setPriceSaveError(null);
+    const updated = products.map((p) =>
+      p.id === productId ? { ...p, price: val } : p
+    );
+
+    try {
+      await onUpdateProducts(updated);
+      setPriceDrafts((current) => {
+        const next = { ...current };
+        delete next[productId];
+        return next;
+      });
+    } catch (error) {
+      console.error('No se pudo guardar el precio del artículo:', error);
+      setPriceSaveError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar el precio en la nube. Volvé a intentarlo.'
       );
-      onUpdateProducts(updated);
+    } finally {
+      setSavingPriceIds((current) => current.filter((id) => id !== productId));
     }
   };
 
@@ -397,6 +432,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </button>
             </div>
 
+            {priceSaveError && (
+              <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                {priceSaveError}
+              </div>
+            )}
+
             {/* Quick helper tip */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-800 flex items-center gap-2">
               <AlertCircle size={15} className="shrink-0 text-amber-600" />
@@ -455,16 +496,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             {store.currencySymbol}
                           </span>
                           <input
-                            key={`${p.id}-${p.price}`}
                             type="number"
-                            step="0.5"
+                            step="any"
                             min="0"
-                            defaultValue={p.price}
-                            onBlur={(e) =>
-                              handleInlinePriceChange(p.id, e.target.value)
+                            value={priceDrafts[p.id] ?? String(p.price)}
+                            disabled={savingPriceIds.includes(p.id)}
+                            onChange={(e) =>
+                              setPriceDrafts((current) => ({
+                                ...current,
+                                [p.id]: e.target.value,
+                              }))
                             }
-                            className="w-16 text-xs sm:text-sm font-extrabold text-red-600 focus:outline-none"
-                            title="Precio actual"
+                            onBlur={(e) => {
+                              const draft = priceDrafts[p.id];
+                              if (draft !== undefined && draft !== String(p.price)) {
+                                void handleInlinePriceChange(p.id, e.currentTarget.value);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.currentTarget.blur();
+                              }
+                            }}
+                            className="w-16 text-xs sm:text-sm font-extrabold text-red-600 focus:outline-none disabled:opacity-60"
+                            title={savingPriceIds.includes(p.id) ? 'Guardando precio…' : 'El precio se guarda al salir del campo'}
                           />
                         </div>
 
