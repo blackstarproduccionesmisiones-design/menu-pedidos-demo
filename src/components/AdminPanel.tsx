@@ -38,7 +38,7 @@ interface AdminPanelProps {
   categories: Category[];
   store: StoreInfo;
   orders: SavedOrder[];
-  onUpdateProducts: (products: Product[]) => void;
+  onUpdateProducts: (products: Product[]) => Promise<void>;
   onUpdateCategories: (categories: Category[]) => void;
   onUpdateStore: (store: StoreInfo) => void;
   onResetDefaults: () => void;
@@ -68,6 +68,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Product Editing state
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isNewProduct, setIsNewProduct] = useState(false);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [saveProductError, setSaveProductError] = useState<string | null>(null);
 
   // Category Editing state
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -135,18 +137,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setIsNewProduct(true);
   };
 
-  const handleSaveProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct || !editingProduct.name.trim()) return;
+    if (!editingProduct || !editingProduct.name.trim() || isSavingProduct) return;
 
-    if (isNewProduct) {
-      onUpdateProducts([...products, editingProduct]);
-    } else {
-      onUpdateProducts(
-        products.map((p) => (p.id === editingProduct.id ? editingProduct : p))
+    setIsSavingProduct(true);
+    setSaveProductError(null);
+
+    const updatedProducts = isNewProduct
+      ? [...products, editingProduct]
+      : products.map((p) => (p.id === editingProduct.id ? editingProduct : p));
+
+    try {
+      await onUpdateProducts(updatedProducts);
+      setEditingProduct(null);
+    } catch (error) {
+      console.error('No se pudo guardar el artículo:', error);
+      setSaveProductError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar el artículo en la nube. Revisá la conexión y los permisos.'
       );
+    } finally {
+      setIsSavingProduct(false);
     }
-    setEditingProduct(null);
   };
 
   // Handlers for categories
@@ -1486,6 +1500,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </label>
                 </div>
 
+                {saveProductError && (
+                  <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                    {saveProductError}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-200">
                   <button
                     type="button"
@@ -1496,9 +1516,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </button>
                   <button
                     type="submit"
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2 rounded-xl text-xs sm:text-sm shadow-md transition"
+                    disabled={isSavingProduct}
+                    className="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white font-bold px-5 py-2 rounded-xl text-xs sm:text-sm shadow-md transition"
                   >
-                    Guardar Artículo
+                    {isSavingProduct ? 'Guardando…' : 'Guardar Artículo'}
                   </button>
                 </div>
               </form>
