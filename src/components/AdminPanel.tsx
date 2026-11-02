@@ -228,6 +228,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const handleSaveStore = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSavingCommerce) return;
+
+    // Validar explícitamente solo los campos realmente obligatorios.
+    // Las URL opcionales no deben bloquear el submit por validación nativa del navegador.
+    if (!storeForm.name.trim() || !storeForm.phone.trim() || !storeForm.currencySymbol.trim()) {
+      setStoreSavedNotification(false);
+      setSaveCommerceError('Completá el nombre del comercio, el WhatsApp y el símbolo de moneda.');
+      return;
+    }
+
     setStoreSavedNotification(false);
     setSaveCommerceError(null);
     setIsSavingCommerce(true);
@@ -703,6 +712,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         {/* Tab 3: Store & WhatsApp Configuration */}
         {activeTab === 'store' && (
           <form
+            noValidate
             onSubmit={handleSaveStore}
             className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5"
           >
