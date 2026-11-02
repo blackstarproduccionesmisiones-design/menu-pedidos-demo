@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getIdToken } from 'firebase/auth';
 import { firebaseAuth } from '../firebase';
+import { ImageUploader } from './ImageUploader';
 import { Category, Product, SavedOrder, StoreInfo } from '../types';
 import { formatPrice } from '../utils/formatters';
 import {
@@ -35,6 +36,7 @@ import {
 
 interface AdminPanelProps {
   isOpen: boolean;
+  commerceId: string;
   onClose: () => void;
   products: Product[];
   categories: Category[];
@@ -46,6 +48,7 @@ interface AdminPanelProps {
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
   isOpen,
+  commerceId,
   onClose,
   products,
   categories,
@@ -977,30 +980,36 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-stone-700 mb-1">
-                  URL de Imagen de Portada Superior
+                  Foto de portada del comercio
                 </label>
+                <ImageUploader commerceId={commerceId} kind="cover" currentUrl={storeForm.coverUrl} onUploaded={(url) => setStoreForm({ ...storeForm, coverUrl: url })} />
+                <details className="mt-2"><summary className="cursor-pointer text-[11px] text-stone-500">Ingresar una URL manualmente</summary>
                 <input
                   type="url"
                   value={storeForm.coverUrl}
                   onChange={(e) =>
                     setStoreForm({ ...storeForm, coverUrl: e.target.value })
                   }
-                  className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-xs sm:text-sm"
+                  className="mt-2 w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-xs sm:text-sm"
                 />
+                </details>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-stone-700 mb-1">
-                  URL del Logo del Comercio
+                  Logo del comercio
                 </label>
+                <ImageUploader commerceId={commerceId} kind="logo" currentUrl={storeForm.logoUrl} onUploaded={(url) => setStoreForm({ ...storeForm, logoUrl: url })} />
+                <details className="mt-2"><summary className="cursor-pointer text-[11px] text-stone-500">Ingresar una URL manualmente</summary>
                 <input
                   type="url"
                   value={storeForm.logoUrl}
                   onChange={(e) =>
                     setStoreForm({ ...storeForm, logoUrl: e.target.value })
                   }
-                  className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-xs sm:text-sm"
+                  className="mt-2 w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-xs sm:text-sm"
                 />
+                </details>
               </div>
 
               <div>
