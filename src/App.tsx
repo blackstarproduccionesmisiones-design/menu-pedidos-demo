@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Category, Product, StoreInfo, CartItem, SavedOrder, OrderType } from './types';
 import {
   getStoredCategories,
@@ -246,13 +246,26 @@ export default function App() {
     showToast('Sesión cerrada');
   };
 
-  // Actualizar productos: respaldo local y guardado en Firestore
+  // Cola de guardado: evita que escrituras simultáneas de listas completas
+  // se crucen y que una edición anterior sobrescriba una más reciente.
+  const productsSaveQueue = useRef<Promise<void>>(Promise.resolve());
+
+  // Actualizar productos: respaldo local y guardado ordenado en Firestore
   const handleUpdateProducts = async (newProducts: Product[]) => {
     setProducts(newProducts);
     saveStoredProducts(newProducts);
 
+    const saveOperation = productsSaveQueue.current
+      .catch(() => undefined)
+      .then(() => saveProductsCloud(newProducts));
+
+    productsSaveQueue.current = saveOperation.then(
+      () => undefined,
+      () => undefined
+    );
+
     try {
-      await saveProductsCloud(newProducts);
+      await saveOperation;
       showToast('Menú actualizado y guardado en la nube');
     } catch (error) {
       console.error('Error al guardar productos en Firebase:', error);
