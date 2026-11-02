@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { StoreInfo } from '../types';
-import { STORE_SCHEDULE_DETAILS } from '../data/defaultMenu';
 import { formatPrice } from '../utils/formatters';
-import { Clock, MapPin, Phone, Info, X, ShieldCheck, Calendar, Instagram, MessageCircle } from 'lucide-react';
+import { Clock, MapPin, Phone, Info, X, ShieldCheck, Instagram, MessageCircle } from 'lucide-react';
 
 interface HeaderBannerProps {
   store: StoreInfo;
@@ -63,7 +62,7 @@ export const HeaderBanner: React.FC<HeaderBannerProps> = ({
             <button
               onClick={() => setShowInfoModal(true)}
               className="text-stone-400 hover:text-stone-700"
-              title="Información y horarios del local"
+              title="Información del local"
             >
               <Info size={13} />
             </button>
@@ -173,26 +172,6 @@ export const HeaderBanner: React.FC<HeaderBannerProps> = ({
                 <div>
                   <span className="font-bold block text-stone-900 text-xs">WhatsApp de Pedidos</span>
                   <span className="text-xs sm:text-sm text-stone-800 font-mono font-bold">+{store.phone}</span>
-                </div>
-              </div>
-
-              {/* Weekly Structured Schedule */}
-              <div className="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800 uppercase tracking-wider mb-1">
-                  <Calendar size={14} className="text-red-600" />
-                  <span>Horarios de Atención Semanales</span>
-                </div>
-
-                <div className="space-y-1.5 text-xs divide-y divide-stone-200/80">
-                  {STORE_SCHEDULE_DETAILS.map((s, idx) => (
-                    <div key={idx} className="pt-1.5 first:pt-0 flex items-start justify-between gap-2">
-                      <span className="font-bold text-stone-900 w-20">{s.day}</span>
-                      <div className="text-right text-stone-600 font-medium">
-                        <div>{s.lunch}</div>
-                        <div>{s.dinner}</div>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
 
