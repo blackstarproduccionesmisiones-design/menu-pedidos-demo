@@ -1589,8 +1589,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       const file = e.target.files?.[0];
                       if (!file) return;
                       setImageUploadError(null);
-                      if (file.size > 5 * 1024 * 1024) {
-                        setImageUploadError('La imagen no debe superar los 5 MB.');
+                      if (file.size > 3 * 1024 * 1024) {
+                        setImageUploadError('La imagen no debe superar los 3 MB.');
                         e.target.value = '';
                         return;
                       }
@@ -1632,7 +1632,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     }}
                     className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-xs sm:text-sm"
                   />
-                  <p className="text-[11px] text-stone-500 mt-1">JPG, PNG o WEBP · Máximo 5 MB. La imagen se alojará automáticamente.</p>
+                  <p className="text-[11px] text-stone-500 mt-1">JPG, PNG o WEBP · Máximo 3 MB. La imagen se alojará automáticamente.</p>
                   {isUploadingImage && <p className="text-xs text-blue-700 mt-2 font-semibold">Subiendo imagen...</p>}
                   {imageUploadError && <p className="text-xs text-red-600 mt-2">{imageUploadError}</p>}
                   {editingProduct.imageUrl && (
