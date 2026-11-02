@@ -81,6 +81,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [pendingProducts, setPendingProducts] = useState<Product[] | null>(null);
   const [pendingCategories, setPendingCategories] = useState<Category[] | null>(null);
   const [saveCommerceError, setSaveCommerceError] = useState<string | null>(null);
+  const [isSavingCommerce, setIsSavingCommerce] = useState(false);
   const currentProducts = pendingProducts ?? products;
   const currentCategories = pendingCategories ?? categories;
 
@@ -226,8 +227,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Save the complete commerce configuration and catalog together.
   const handleSaveStore = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSavingCommerce) return;
     setStoreSavedNotification(false);
     setSaveCommerceError(null);
+    setIsSavingCommerce(true);
     try {
       await onSaveCommerce(currentProducts, currentCategories, storeForm);
       setPendingProducts(null);
@@ -237,6 +240,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     } catch (error) {
       console.error('No se pudieron guardar los cambios del comercio:', error);
       setSaveCommerceError(error instanceof Error ? error.message : 'No se pudieron guardar los cambios. Revisá la conexión e intentá nuevamente.');
+    } finally {
+      setIsSavingCommerce(false);
     }
   };
 
@@ -439,7 +444,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
             )}
 
-            {pendingProducts !== null && (
+            {(pendingProducts !== null || pendingCategories !== null) && (
               <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
                 Tenés cambios de productos pendientes. Para guardarlos en la nube, entrá en "Datos del Negocio & WhatsApp" y pulsá "Guardar Cambios del Comercio".
               </div>
@@ -1013,10 +1018,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
               <button
                 type="submit"
-                className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-md transition"
+                disabled={isSavingCommerce}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white font-bold px-6 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-md transition"
               >
                 <Save size={16} />
-                <span>Guardar Cambios del Comercio</span>
+                <span>{isSavingCommerce ? 'Guardando cambios…' : 'Guardar Cambios del Comercio'}</span>
               </button>
             </div>
           </form>
