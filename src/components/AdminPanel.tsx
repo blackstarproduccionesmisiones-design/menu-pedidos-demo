@@ -174,7 +174,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct || !editingProduct.name.trim() || isSavingProduct) return;
+    if (!editingProduct || !editingProduct.name.trim() || isSavingProduct || savingPriceIds.length > 0) return;
 
     setIsSavingProduct(true);
     setSaveProductError(null);
@@ -185,6 +185,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
     try {
       await onUpdateProducts(updatedProducts);
+      setPriceDrafts((current) => {
+        const next = { ...current };
+        delete next[editingProduct.id];
+        return next;
+      });
       setEditingProduct(null);
     } catch (error) {
       console.error('No se pudo guardar el artículo:', error);
@@ -430,7 +435,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
               <button
                 onClick={handleStartCreateProduct}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-xs transition"
+                disabled={savingPriceIds.length > 0}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-xs transition"
               >
                 <Plus size={16} />
                 <span>Agregar Artículo</span>
@@ -511,7 +517,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             step="any"
                             min="0"
                             value={priceDrafts[p.id] ?? String(p.price)}
-                            disabled={savingPriceIds.includes(p.id)}
+                            disabled={savingPriceIds.length > 0}
                             onChange={(e) =>
                               setPriceDrafts((current) => ({
                                 ...current,
@@ -537,6 +543,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                         {/* Availability toggle */}
                         <button
                           onClick={() => handleToggleProductAvailability(p.id)}
+                          disabled={savingPriceIds.length > 0}
                           className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl border transition ${
                             p.isAvailable
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -558,15 +565,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             onClick={() => {
                               setEditingProduct(p);
                               setIsNewProduct(false);
+                              setSaveProductError(null);
                             }}
-                            className="p-1.5 rounded-xl text-stone-500 hover:text-stone-900 hover:bg-stone-200 transition"
+                            disabled={savingPriceIds.length > 0}
+                            className="p-1.5 rounded-xl text-stone-500 hover:text-stone-900 hover:bg-stone-200 disabled:opacity-40 transition"
                             title="Editar detalles completos"
                           >
                             <Edit2 size={16} />
                           </button>
                           <button
                             onClick={() => handleDeleteProduct(p.id, p.name)}
-                            className="p-1.5 rounded-xl text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                            disabled={savingPriceIds.length > 0}
+                            className="p-1.5 rounded-xl text-stone-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 transition"
                             title="Eliminar del menú"
                           >
                             <Trash2 size={16} />
@@ -1582,10 +1592,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </button>
                   <button
                     type="submit"
-                    disabled={isSavingProduct}
+                    disabled={isSavingProduct || savingPriceIds.length > 0}
                     className="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white font-bold px-5 py-2 rounded-xl text-xs sm:text-sm shadow-md transition"
                   >
-                    {isSavingProduct ? 'Guardando…' : 'Guardar Artículo'}
+                    {isSavingProduct ? 'Guardando…' : savingPriceIds.length > 0 ? 'Esperando guardado…' : 'Guardar Artículo'}
                   </button>
                 </div>
               </form>
