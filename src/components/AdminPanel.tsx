@@ -336,6 +336,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         <div className="bg-stone-100 border-b border-stone-200 px-4 flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0">
           <button
             onClick={() => setActiveTab('products')}
+            disabled={savingPriceIds.length > 0}
             className={`py-3 px-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
               activeTab === 'products'
                 ? 'border-red-600 text-red-600 bg-white shadow-xs rounded-t-xl'
@@ -348,6 +349,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             onClick={() => setActiveTab('categories')}
+            disabled={savingPriceIds.length > 0}
             className={`py-3 px-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
               activeTab === 'categories'
                 ? 'border-red-600 text-red-600 bg-white shadow-xs rounded-t-xl'
@@ -360,6 +362,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             onClick={() => setActiveTab('store')}
+            disabled={savingPriceIds.length > 0}
             className={`py-3 px-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
               activeTab === 'store'
                 ? 'border-red-600 text-red-600 bg-white shadow-xs rounded-t-xl'
@@ -372,6 +375,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             onClick={() => setActiveTab('orders')}
+            disabled={savingPriceIds.length > 0}
             className={`py-3 px-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
               activeTab === 'orders'
                 ? 'border-red-600 text-red-600 bg-white shadow-xs rounded-t-xl'
@@ -384,6 +388,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             onClick={() => setActiveTab('qr')}
+            disabled={savingPriceIds.length > 0}
             className={`py-3 px-3.5 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
               activeTab === 'qr'
                 ? 'border-red-600 text-red-600 bg-white shadow-xs rounded-t-xl'
@@ -431,6 +436,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <span>Agregar Artículo</span>
               </button>
             </div>
+
+            {savingPriceIds.length > 0 && (
+              <div role="status" className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                Guardando el precio en la nube… Esperá a que termine antes de cambiar de sección.
+              </div>
+            )}
 
             {priceSaveError && (
               <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
