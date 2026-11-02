@@ -4,6 +4,7 @@ import {
   doc,
   getDocs,
   setDoc,
+  writeBatch,
   onSnapshot,
   query,
   orderBy,
@@ -26,6 +27,37 @@ function getCommerceDocument(name: string, commerceId: string) {
   }
 
   return doc(firestore, 'comercios', commerceId, name, 'principal');
+}
+
+
+// Firestore no admite propiedades con valor undefined.
+function removeUndefinedFields<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => item === undefined ? null : removeUndefinedFields(item)) as T;
+  }
+  if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, fieldValue]) => fieldValue !== undefined)
+        .map(([key, fieldValue]) => [key, removeUndefinedFields(fieldValue)])
+    ) as T;
+  }
+  return value;
+}
+
+// Guarda productos, categorías y configuración en una única operación atómica por comercio.
+export async function saveCommerceCloud(
+  products: Product[],
+  categories: Category[],
+  store: StoreInfo,
+  commerceId = 'lodepichi'
+) {
+  if (!firestore) throw new Error('Firebase no está configurado.');
+  const batch = writeBatch(firestore);
+  batch.set(getCommerceDocument('productos', commerceId), { items: removeUndefinedFields(products) });
+  batch.set(getCommerceDocument('categorias', commerceId), { items: removeUndefinedFields(categories) });
+  batch.set(getCommerceDocument('configuracion', commerceId), removeUndefinedFields(store));
+  await batch.commit();
 }
 
 // PRODUCTOS
