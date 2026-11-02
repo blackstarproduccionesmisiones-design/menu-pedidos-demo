@@ -238,16 +238,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
 
     setStoreSavedNotification(false);
-    setSaveCommerceError(null);
     setIsSavingCommerce(true);
     try {
       await onSaveCommerce(currentProducts, currentCategories, storeForm);
       setPendingProducts(null);
       setPendingCategories(null);
+      setSaveCommerceError(null);
       setStoreSavedNotification(true);
-      setTimeout(() => setStoreSavedNotification(false), 3500);
     } catch (error) {
       console.error('No se pudieron guardar los cambios del comercio:', error);
+      setStoreSavedNotification(false);
       setSaveCommerceError(error instanceof Error ? error.message : 'No se pudieron guardar los cambios. Revisá la conexión e intentá nuevamente.');
     } finally {
       setIsSavingCommerce(false);
@@ -1033,9 +1033,34 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 className="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white font-bold px-6 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-md transition"
               >
                 <Save size={16} />
-                <span>{isSavingCommerce ? 'Guardando cambios…' : 'Guardar Cambios del Comercio'}</span>
+                <span>
+                  {isSavingCommerce
+                    ? 'Guardando…'
+                    : saveCommerceError
+                      ? 'Error al guardar ✕'
+                      : storeSavedNotification
+                        ? 'Cambios guardados ✓'
+                        : 'Guardar Cambios del Comercio'}
+                </span>
               </button>
             </div>
+
+            {isSavingCommerce && (
+              <div role="status" aria-live="polite" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                Guardando los datos del comercio y el catálogo en la nube…
+              </div>
+            )}
+            {saveCommerceError && (
+              <div role="alert" aria-live="assertive" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                <span className="font-extrabold">No se pudieron guardar los cambios.</span> {saveCommerceError}
+                <span className="block mt-1">Revisá la conexión y volvé a intentarlo. Tus cambios pendientes siguen en el administrador.</span>
+              </div>
+            )}
+            {storeSavedNotification && !isSavingCommerce && !saveCommerceError && (
+              <div role="status" aria-live="polite" className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                <Check size={15} className="inline mr-1" /> Los cambios del comercio, productos y categorías se guardaron correctamente en la nube.
+              </div>
+            )}
           </form>
         )}
 
