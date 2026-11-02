@@ -56,8 +56,10 @@ export const HeaderBanner: React.FC<HeaderBannerProps> = ({
         <div className="absolute bottom-3 right-3 flex items-center gap-2">
           <div className="bg-white/95 backdrop-blur-md rounded-lg px-2.5 py-1 shadow-md text-stone-800 flex items-center gap-1.5 text-[11px] sm:text-xs">
             <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span className="font-semibold text-emerald-700">Abierto</span>
+              <span className={`w-2 h-2 rounded-full ${store.isOpen ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+              <span className={`font-semibold ${store.isOpen ? 'text-emerald-700' : 'text-rose-700'}`}>
+                {store.isOpen ? 'Abierto' : 'Cerrado'}
+              </span>
             </div>
             <button
               onClick={() => setShowInfoModal(true)}
