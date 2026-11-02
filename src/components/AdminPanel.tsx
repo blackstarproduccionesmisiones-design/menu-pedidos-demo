@@ -38,9 +38,7 @@ interface AdminPanelProps {
   categories: Category[];
   store: StoreInfo;
   orders: SavedOrder[];
-  onUpdateProducts: (products: Product[]) => Promise<void>;
-  onUpdateCategories: (categories: Category[]) => void;
-  onUpdateStore: (store: StoreInfo) => void;
+  onSaveCommerce: (products: Product[], categories: Category[], store: StoreInfo) => Promise<void>;
   onResetDefaults: () => void;
 }
 
@@ -51,9 +49,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   categories,
   store,
   orders,
-  onUpdateProducts,
-  onUpdateCategories,
-  onUpdateStore,
+  onSaveCommerce,
   onResetDefaults,
 }) => {
   const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'store' | 'orders' | 'qr'>('products');
@@ -82,6 +78,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Store form state
   const [storeForm, setStoreForm] = useState<StoreInfo>(store);
   const [storeSavedNotification, setStoreSavedNotification] = useState(false);
+  const [pendingProducts, setPendingProducts] = useState<Product[] | null>(null);
+  const [pendingCategories, setPendingCategories] = useState<Category[] | null>(null);
+  const [saveCommerceError, setSaveCommerceError] = useState<string | null>(null);
+  const currentProducts = pendingProducts ?? products;
+  const currentCategories = pendingCategories ?? categories;
 
   if (!isOpen) return null;
 
@@ -100,20 +101,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   // Handlers for products
   const handleToggleProductAvailability = (productId: string) => {
-    const updated = products.map((p) =>
+    const updated = currentProducts.map((p) =>
       p.id === productId ? { ...p, isAvailable: !p.isAvailable } : p
     );
-    onUpdateProducts(updated);
+    setPendingProducts(updated);
   };
 
-  const handleInlinePriceChange = async (productId: string, newPriceStr: string) => {
+  const handleInlinePriceChange = (productId: string, newPriceStr: string) => {
     const val = Number(newPriceStr);
     if (!Number.isFinite(val) || val < 0) {
       setPriceSaveError('Ingresá un precio válido para guardar.');
       return;
     }
-
-    const currentProduct = products.find((p) => p.id === productId);
+    const currentProduct = currentProducts.find((p) => p.id === productId);
     if (!currentProduct || currentProduct.price === val) {
       setPriceDrafts((current) => {
         const next = { ...current };
@@ -122,41 +122,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       });
       return;
     }
-
-    setSavingPriceIds((current) => [...new Set([...current, productId])]);
-    setPriceSaveError(null);
-    const updated = products.map((p) =>
+    setPendingProducts(currentProducts.map((p) =>
       p.id === productId ? { ...p, price: val } : p
-    );
-
-    try {
-      await onUpdateProducts(updated);
-      setPriceDrafts((current) => {
-        const next = { ...current };
-        delete next[productId];
-        return next;
-      });
-    } catch (error) {
-      console.error('No se pudo guardar el precio del artículo:', error);
-      setPriceSaveError(
-        error instanceof Error
-          ? error.message
-          : 'No se pudo guardar el precio en la nube. Volvé a intentarlo.'
-      );
-    } finally {
-      setSavingPriceIds((current) => current.filter((id) => id !== productId));
-    }
+    ));
+    setPriceSaveError(null);
+    setPriceDrafts((current) => {
+      const next = { ...current };
+      delete next[productId];
+      return next;
+    });
   };
 
   const handleDeleteProduct = (productId: string, name: string) => {
     if (window.confirm(`¿Estás seguro de eliminar "${name}" del menú?`)) {
-      const updated = products.filter((p) => p.id !== productId);
-      onUpdateProducts(updated);
+      const updated = currentProducts.filter((p) => p.id !== productId);
+      setPendingProducts(updated);
     }
   };
 
   const handleStartCreateProduct = () => {
-    const firstCat = categories[0]?.id || 'cat_default';
+    const firstCat = currentCategories[0]?.id || 'cat_default';
     setEditingProduct({
       id: `prod_${Date.now()}`,
       name: '',
@@ -180,27 +165,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setSaveProductError(null);
 
     const updatedProducts = isNewProduct
-      ? [...products, editingProduct]
-      : products.map((p) => (p.id === editingProduct.id ? editingProduct : p));
-
-    try {
-      await onUpdateProducts(updatedProducts);
-      setPriceDrafts((current) => {
-        const next = { ...current };
-        delete next[editingProduct.id];
-        return next;
-      });
-      setEditingProduct(null);
-    } catch (error) {
-      console.error('No se pudo guardar el artículo:', error);
-      setSaveProductError(
-        error instanceof Error
-          ? error.message
-          : 'No se pudo guardar el artículo en la nube. Revisá la conexión y los permisos.'
-      );
-    } finally {
-      setIsSavingProduct(false);
-    }
+      ? [...currentProducts, editingProduct]
+      : currentProducts.map((p) => (p.id === editingProduct.id ? editingProduct : p));
+    setPendingProducts(updatedProducts);
+    setPriceDrafts((current) => {
+      const next = { ...current };
+      delete next[editingProduct.id];
+      return next;
+    });
+    setEditingProduct(null);
+    setIsSavingProduct(false);
   };
 
   // Handlers for categories
@@ -209,9 +183,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     const newCat: Category = {
       id: `cat_${Date.now()}`,
       name: newCategoryName.trim(),
-      order: categories.length + 1,
+      order: currentCategories.length + 1,
     };
-    onUpdateCategories([...categories, newCat]);
+    setPendingCategories([...currentCategories, newCat]);
     setNewCategoryName('');
   };
 
@@ -223,10 +197,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const handleSaveCategory = (catId: string) => {
     const name = editingCategoryName.trim();
     if (!name) return;
-    const updated = categories.map((category) =>
+    const updated = currentCategories.map((category) =>
       category.id === catId ? { ...category, name } : category
     );
-    onUpdateCategories(updated);
+    setPendingCategories(updated);
     setEditingCategoryId(null);
     setEditingCategoryName('');
   };
@@ -237,7 +211,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   const handleDeleteCategory = (catId: string, catName: string) => {
-    const hasItems = products.some((p) => p.categoryId === catId);
+    const hasItems = currentProducts.some((p) => p.categoryId === catId);
     if (
       hasItems &&
       !window.confirm(
@@ -246,15 +220,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     ) {
       return;
     }
-    onUpdateCategories(categories.filter((c) => c.id !== catId));
+    setPendingCategories(currentCategories.filter((c) => c.id !== catId));
   };
 
-  // Save store settings
-  const handleSaveStore = (e: React.FormEvent) => {
+  // Save the complete commerce configuration and catalog together.
+  const handleSaveStore = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateStore(storeForm);
-    setStoreSavedNotification(true);
-    setTimeout(() => setStoreSavedNotification(false), 2500);
+    setStoreSavedNotification(false);
+    setSaveCommerceError(null);
+    try {
+      await onSaveCommerce(currentProducts, currentCategories, storeForm);
+      setPendingProducts(null);
+      setPendingCategories(null);
+      setStoreSavedNotification(true);
+      setTimeout(() => setStoreSavedNotification(false), 3500);
+    } catch (error) {
+      console.error('No se pudieron guardar los cambios del comercio:', error);
+      setSaveCommerceError(error instanceof Error ? error.message : 'No se pudieron guardar los cambios. Revisá la conexión e intentá nuevamente.');
+    }
   };
 
   const handleExportBackup = () => {
@@ -263,7 +246,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       exportDate: new Date().toISOString(),
       store: storeForm,
       categories,
-      products,
+      products: currentProducts,
+      categories: currentCategories,
     };
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -283,11 +267,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         const json = JSON.parse(event.target?.result as string);
         if (json.products && json.categories && json.store) {
           if (window.confirm('¿Deseas restaurar este menú? Reemplazará los productos, categorías y configuración actuales.')) {
-            onUpdateProducts(json.products);
-            onUpdateCategories(json.categories);
-            onUpdateStore(json.store);
+            setPendingProducts(json.products);
+            setPendingCategories(json.categories);
             setStoreForm(json.store);
-            alert('¡Menú restaurado exitosamente!');
+            setSaveCommerceError(null);
+            alert('Copia cargada en el administrador. Para aplicarla, pulsá "Guardar Cambios del Comercio".');
           }
         } else {
           alert('El archivo no tiene el formato válido de copia de seguridad.');
@@ -301,7 +285,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   // Filtered products list
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = currentProducts.filter((p) => {
     const matchCat = filterCategory === 'all' || p.categoryId === filterCategory;
     const matchSearch =
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -349,7 +333,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             }`}
           >
             <Utensils size={16} />
-            <span>Artículos & Precios ({products.length})</span>
+            <span>Artículos & Precios ({currentProducts.length})</span>
           </button>
 
           <button
@@ -362,7 +346,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             }`}
           >
             <Layers size={16} />
-            <span>Categorías ({categories.length})</span>
+            <span>Categorías ({currentCategories.length})</span>
           </button>
 
           <button
@@ -425,7 +409,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   className="bg-stone-50 border border-stone-300 px-3 py-1.5 rounded-xl text-xs sm:text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
                   <option value="all">Todas las categorías</option>
-                  {categories.map((c) => (
+                  {currentCategories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>
@@ -455,6 +439,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
             )}
 
+            {pendingProducts !== null && (
+              <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                Tenés cambios de productos pendientes. Para guardarlos en la nube, entrá en "Datos del Negocio & WhatsApp" y pulsá "Guardar Cambios del Comercio".
+              </div>
+            )}
             {/* Quick helper tip */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-800 flex items-center gap-2">
               <AlertCircle size={15} className="shrink-0 text-amber-600" />
@@ -472,7 +461,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               ) : (
                 filteredProducts.map((p) => {
-                  const catName = categories.find((c) => c.id === p.categoryId)?.name || 'Sin categoría';
+                  const catName = currentCategories.find((c) => c.id === p.categoryId)?.name || 'Sin categoría';
                   return (
                     <div
                       key={p.id}
@@ -619,11 +608,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-stone-500 uppercase tracking-wider">
-                Categorías activas ({categories.length})
+                Categorías activas ({currentCategories.length})
               </h4>
               <div className="divide-y divide-stone-200 bg-stone-50 rounded-2xl border border-stone-200 overflow-hidden">
-                {categories.map((c, idx) => {
-                  const count = products.filter((p) => p.categoryId === c.id).length;
+                {currentCategories.map((c, idx) => {
+                  const count = currentProducts.filter((p) => p.categoryId === c.id).length;
                   return (
                     <div
                       key={c.id}
@@ -713,9 +702,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5"
           >
             {storeSavedNotification && (
-              <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-sm font-semibold flex items-center gap-2">
+              <div role="status" className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-sm font-semibold flex items-center gap-2">
                 <Check size={18} />
-                <span>¡Configuración del negocio guardada con éxito!</span>
+                <span>¡Catálogo, categorías y datos del comercio guardados correctamente!</span>
+              </div>
+            )}
+            {saveCommerceError && (
+              <div role="alert" className="p-3 bg-rose-50 border border-rose-300 text-rose-800 rounded-xl text-sm font-semibold">
+                {saveCommerceError}
               </div>
             )}
 
@@ -1428,7 +1422,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       }
                       className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
-                      {categories.map((c) => (
+                      {currentCategories.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
                         </option>
