@@ -23,6 +23,7 @@ import {
   saveCategoriesCloud,
   subscribeCategoriesCloud,
   saveStoreCloud,
+  saveCommerceCloud,
   subscribeStoreCloud,
 } from './utils/firestoreStorage';
 import { HeaderBanner } from './components/HeaderBanner';
@@ -185,7 +186,13 @@ export default function App() {
         return;
       }
 
-      setIsMasterAdmin(profile.rol === 'admin_maestro');
+      const masterAccess = profile.rol === 'admin_maestro';
+      if (!masterAccess && profile.comercioId !== commerceId) {
+        await signOut(firebaseAuth);
+        setLoginError(`Esta cuenta no está habilitada para administrar el comercio ${commerceId}.`);
+        return;
+      }
+      setIsMasterAdmin(masterAccess);
       setAdminEmail(credential.user.email ?? loginEmail.trim());
       setIsPinModalOpen(false);
       setIsAdminOpen(true);
@@ -278,6 +285,27 @@ export default function App() {
     } catch (error) {
       console.error('Error al guardar la configuración en Firebase:', error);
       showToast('Configuración guardada localmente, pero no en la nube');
+    }
+  };
+
+  const handleSaveCommerce = async (
+    newProducts: Product[],
+    newCategories: Category[],
+    newStore: StoreInfo
+  ) => {
+    try {
+      await saveCommerceCloud(newProducts, newCategories, newStore, commerceId);
+      setProducts(newProducts);
+      setCategories(newCategories);
+      setStore(newStore);
+      saveStoredProducts(newProducts, commerceId);
+      saveStoredCategories(newCategories, commerceId);
+      saveStoredStoreInfo(newStore, commerceId);
+      showToast('Catálogo y datos del comercio guardados en la nube');
+    } catch (error) {
+      console.error('Error al guardar el comercio completo en Firebase:', error);
+      showToast('No se pudieron guardar los cambios del comercio');
+      throw error;
     }
   };
 
@@ -589,9 +617,7 @@ export default function App() {
             categories={categories}
             store={store}
             orders={orders}
-            onUpdateProducts={handleUpdateProducts}
-            onUpdateCategories={handleUpdateCategories}
-            onUpdateStore={handleUpdateStore}
+            onSaveCommerce={handleSaveCommerce}
             onResetDefaults={handleResetDefaults}
           />
         )}
