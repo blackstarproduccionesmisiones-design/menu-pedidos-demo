@@ -661,6 +661,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 />
               </div>
 
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Dirección del comercio
+                </label>
+                <input
+                  type="text"
+                  value={storeForm.address || ''}
+                  onChange={(e) =>
+                    setStoreForm({ ...storeForm, address: e.target.value })
+                  }
+                  placeholder="Ej: Av. Mitre 1234, Posadas"
+                  className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+                <span className="text-[11px] text-stone-500 mt-0.5 block">
+                  Esta dirección se mostrará en el menú público y en la ventana de información.
+                </span>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-stone-700 mb-1">
                   Número de WhatsApp para Pedidos (con código de país)
