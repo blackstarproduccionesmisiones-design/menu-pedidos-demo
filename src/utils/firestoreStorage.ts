@@ -41,11 +41,33 @@ function getCommerceDocument(name: string) {
   return doc(firestore, 'comercios', COMERCIO_ID, name, 'principal');
 }
 
+
+// Firestore no admite propiedades con valor undefined.
+// Limpiamos recursivamente los objetos antes de escribirlos, sin mutar el estado del administrador.
+function removeUndefinedFields<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      item === undefined ? null : removeUndefinedFields(item)
+    ) as T;
+  }
+
+  if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+    const cleaned = Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, fieldValue]) => fieldValue !== undefined)
+        .map(([key, fieldValue]) => [key, removeUndefinedFields(fieldValue)])
+    );
+    return cleaned as T;
+  }
+
+  return value;
+}
+
 // PRODUCTOS
 
 export async function saveProductsCloud(products: Product[]) {
   await setDoc(getCommerceDocument('productos'), {
-    items: products,
+    items: removeUndefinedFields(products),
   });
 }
 
@@ -68,7 +90,7 @@ export function subscribeProductsCloud(
 
 export async function saveCategoriesCloud(categories: Category[]) {
   await setDoc(getCommerceDocument('categorias'), {
-    items: categories,
+    items: removeUndefinedFields(categories),
   });
 }
 
@@ -91,7 +113,7 @@ export function subscribeCategoriesCloud(
 
 export async function saveStoreCloud(store: StoreInfo) {
   await setDoc(getCommerceDocument('configuracion'), {
-    ...store,
+    ...removeUndefinedFields(store),
   });
 }
 
@@ -105,9 +127,9 @@ export async function saveCommerceCloud(
     throw new Error('Firebase no está configurado.');
   }
   const batch = writeBatch(firestore);
-  batch.set(getCommerceDocument('productos'), { items: products });
-  batch.set(getCommerceDocument('categorias'), { items: categories });
-  batch.set(getCommerceDocument('configuracion'), { ...store });
+  batch.set(getCommerceDocument('productos'), { items: removeUndefinedFields(products) });
+  batch.set(getCommerceDocument('categorias'), { items: removeUndefinedFields(categories) });
+  batch.set(getCommerceDocument('configuracion'), { ...removeUndefinedFields(store) });
   await batch.commit();
 }
 
