@@ -117,7 +117,7 @@ export const HeaderBanner: React.FC<HeaderBannerProps> = ({
                 onClick={() => setShowInfoModal(true)}
                 className="text-red-600 hover:text-red-700 font-semibold underline text-xs"
               >
-                Ver Horarios
+                Ver información
               </button>
             </div>
             {(store.whatsappUrl || store.instagramUrl) && (
