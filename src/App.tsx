@@ -611,7 +611,6 @@ export default function App() {
         ) : (
           <AdminPanel
             isOpen={isAdminOpen}
-            commerceId={commerceId}
             onClose={() => setIsAdminOpen(false)}
             products={products}
             categories={categories}
