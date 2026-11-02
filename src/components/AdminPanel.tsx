@@ -225,8 +225,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   // Save the complete commerce configuration and catalog together.
-  const handleSaveStore = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveStore = async (e?: React.FormEvent | React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
     if (isSavingCommerce) return;
 
     // Validar explícitamente solo los campos realmente obligatorios.
@@ -1027,7 +1027,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </button>
 
               <button
-                type="submit"
+                type="button"
+                onClick={() => void handleSaveStore()}
                 disabled={isSavingCommerce}
                 className="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-wait text-white font-bold px-6 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-md transition"
               >
