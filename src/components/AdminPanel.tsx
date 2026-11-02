@@ -441,6 +441,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                             {store.currencySymbol}
                           </span>
                           <input
+                            key={`${p.id}-${p.price}`}
                             type="number"
                             step="0.5"
                             min="0"
@@ -1371,7 +1372,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </label>
                   <input
                     type="number"
-                    step="100"
+                    step="any"
                     min="0"
                     required
                     value={editingProduct.price}
