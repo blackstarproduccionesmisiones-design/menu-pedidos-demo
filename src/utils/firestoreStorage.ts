@@ -4,6 +4,7 @@ import {
   doc,
   getDocs,
   setDoc,
+  writeBatch,
   onSnapshot,
   query,
   orderBy,
@@ -92,6 +93,22 @@ export async function saveStoreCloud(store: StoreInfo) {
   await setDoc(getCommerceDocument('configuracion'), {
     ...store,
   });
+}
+
+// Guarda catálogo, categorías y configuración en una única operación atómica.
+export async function saveCommerceCloud(
+  products: Product[],
+  categories: Category[],
+  store: StoreInfo
+) {
+  if (!firestore) {
+    throw new Error('Firebase no está configurado.');
+  }
+  const batch = writeBatch(firestore);
+  batch.set(getCommerceDocument('productos'), { items: products });
+  batch.set(getCommerceDocument('categorias'), { items: categories });
+  batch.set(getCommerceDocument('configuracion'), { ...store });
+  await batch.commit();
 }
 
 export async function loadStoreCloud(): Promise<StoreInfo | null> {
