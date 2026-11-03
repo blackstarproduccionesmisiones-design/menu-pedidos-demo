@@ -9,6 +9,15 @@ function getAdminFirestore() {
   return getFirestore(app);
 }
 
+function getCloudinaryPwaIcon(url: string, size: 192 | 512) {
+  const uploadPath = '/image/upload/';
+  if (!url.includes('res.cloudinary.com') || !url.includes(uploadPath)) return null;
+  return url.replace(
+    uploadPath,
+    `${uploadPath}c_fill,g_auto,w_${size},h_${size},f_png/`,
+  );
+}
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
@@ -51,14 +60,19 @@ export default async function handler(req: any, res: any) {
   }
 
   const launchUrl = `/?comercio=${encodeURIComponent(commerceId)}`;
-  const icons = appIconUrl
+  const custom192 = appIconUrl ? getCloudinaryPwaIcon(appIconUrl, 192) : null;
+  const custom512 = appIconUrl ? getCloudinaryPwaIcon(appIconUrl, 512) : null;
+  const icons = custom192 && custom512
     ? [
-        { src: appIconUrl, sizes: 'any', purpose: 'any' },
-        { src: appIconUrl, sizes: 'any', purpose: 'maskable' },
+        { src: custom192, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: custom512, sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: '/pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ]
     : [
-        { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-        { src: '/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+        ...(appIconUrl ? [{ src: appIconUrl, sizes: 'any', purpose: 'any' }] : []),
+        { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: '/pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ];
 
   return res.status(200).json({
