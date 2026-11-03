@@ -48,7 +48,7 @@ export default async function handler(req: any, res: any) {
     }
 
     const kind = req.body?.kind;
-    if (!['cover', 'logo', 'product'].includes(kind)) {
+    if (!['cover', 'logo', 'product', 'app-icon'].includes(kind)) {
       return res.status(400).json({ error: 'Tipo de imagen inválido.' });
     }
 
