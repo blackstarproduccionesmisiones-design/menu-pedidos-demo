@@ -53,8 +53,8 @@ export default async function handler(req: any, res: any) {
   const launchUrl = `/?comercio=${encodeURIComponent(commerceId)}`;
   const icons = appIconUrl
     ? [
-        { src: appIconUrl, sizes: '192x192', type: 'image/png', purpose: 'any' },
-        { src: appIconUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        { src: appIconUrl, sizes: 'any', purpose: 'any' },
+        { src: appIconUrl, sizes: 'any', purpose: 'maskable' },
       ]
     : [
         { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
