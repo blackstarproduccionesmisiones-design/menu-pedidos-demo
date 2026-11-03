@@ -1012,6 +1012,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </details>
               </div>
 
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-2">
+                <div>
+                  <label className="block text-xs font-bold text-stone-800 mb-1">
+                    Ícono de la aplicación instalada
+                  </label>
+                  <p className="text-[11px] text-stone-600">
+                    Esta imagen aparecerá como ícono cuando tus clientes instalen el menú en su celular. Recomendamos una imagen cuadrada, con el logo centrado.
+                  </p>
+                </div>
+                <ImageUploader commerceId={commerceId} kind="app-icon" currentUrl={storeForm.appIconUrl} onUploaded={(url) => setStoreForm({ ...storeForm, appIconUrl: url })} />
+                <details className="mt-2"><summary className="cursor-pointer text-[11px] text-stone-500">Ingresar una URL manualmente</summary>
+                  <input
+                    type="url"
+                    value={storeForm.appIconUrl || ''}
+                    onChange={(e) => setStoreForm({ ...storeForm, appIconUrl: e.target.value })}
+                    className="mt-2 w-full bg-white border border-stone-300 px-3 py-2 rounded-xl text-xs sm:text-sm"
+                  />
+                </details>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-stone-700 mb-1 flex items-center gap-1">
                   <Lock size={13} className="text-stone-500" />
