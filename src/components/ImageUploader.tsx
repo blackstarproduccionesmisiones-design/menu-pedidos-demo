@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Upload, LoaderCircle, Image as ImageIcon } from 'lucide-react';
 import { firebaseAuth } from '../firebase';
 
-type ImageKind = 'cover' | 'logo' | 'product';
+type ImageKind = 'cover' | 'logo' | 'product' | 'app-icon';
 
 interface ImageUploaderProps {
   commerceId: string;

@@ -18,6 +18,26 @@
         if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(commerceId)) commerceId = 'lodepichi';
         document.getElementById('app-manifest').href =
           '/api/manifest?comercio=' + encodeURIComponent(commerceId);
+        var manifestUrl = '/api/manifest?comercio=' + encodeURIComponent(commerceId);
+        fetch(manifestUrl)
+          .then(function (response) { return response.ok ? response.json() : null; })
+          .then(function (manifest) {
+            if (!manifest) return;
+            if (manifest.name) document.title = manifest.name;
+            var appTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+            if (appTitle && manifest.short_name) appTitle.setAttribute('content', manifest.short_name);
+            var icon = manifest.icons && manifest.icons.find(function (item) { return item.purpose === 'any'; });
+            if (icon && icon.src) {
+              var appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+              if (!appleIcon) {
+                appleIcon = document.createElement('link');
+                appleIcon.rel = 'apple-touch-icon';
+                document.head.appendChild(appleIcon);
+              }
+              appleIcon.href = icon.src;
+            }
+          })
+          .catch(function () {});
       })();
     </script>
     <meta name="mobile-web-app-capable" content="yes" />

@@ -23,6 +23,7 @@ export interface StoreInfo {
   tagline: string;
   logoUrl: string;
   coverUrl: string;
+  appIconUrl?: string;
   phone: string; // WhatsApp phone e.g. "5491123456789"
   whatsappUrl?: string;
   instagramUrl?: string;
