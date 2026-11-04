@@ -39,7 +39,6 @@ export interface StoreInfo {
   showAnnouncement: boolean;
   address: string;
   hours: string;
-  adminPin?: string;
 }
 
 export interface CartItem {
