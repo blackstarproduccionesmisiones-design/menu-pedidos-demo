@@ -62,11 +62,14 @@ export default async function handler(req: any, res: any) {
   const launchUrl = `/?comercio=${encodeURIComponent(commerceId)}`;
   const custom192 = appIconUrl ? getCloudinaryPwaIcon(appIconUrl, 192) : null;
   const custom512 = appIconUrl ? getCloudinaryPwaIcon(appIconUrl, 512) : null;
+
+  // Si el comercio tiene un ícono propio, no ofrecer el maskable genérico:
+  // Android podría elegirlo para el lanzador en lugar del ícono personalizado.
+  // El ícono adaptable genérico queda como respaldo para comercios sin ícono propio.
   const icons = custom192 && custom512
     ? [
         { src: custom192, sizes: '192x192', type: 'image/png', purpose: 'any' },
         { src: custom512, sizes: '512x512', type: 'image/png', purpose: 'any' },
-        { src: '/pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ]
     : [
         ...(appIconUrl ? [{ src: appIconUrl, sizes: 'any', purpose: 'any' }] : []),
