@@ -29,7 +29,6 @@ import {
   Printer,
   Download,
   Copy,
-  Lock,
   FileDown,
   FileUp,
 } from 'lucide-react';
@@ -1032,25 +1031,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </details>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1 flex items-center gap-1">
-                  <Lock size={13} className="text-stone-500" />
-                  <span>PIN de Seguridad para Panel Admin</span>
-                </label>
-                <input
-                  type="text"
-                  value={storeForm.adminPin || '1234'}
-                  onChange={(e) =>
-                    setStoreForm({ ...storeForm, adminPin: e.target.value })
-                  }
-                  placeholder="••••"
-                  maxLength={6}
-                  className="w-full bg-stone-50 border border-stone-300 px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 font-mono font-bold"
-                />
-                <span className="text-[11px] text-stone-500 mt-0.5 block">
-                  Protege el panel de cambios no autorizados. Elige un PIN numérico de 4 a 6 dígitos.
-                </span>
-              </div>
             </div>
 
             {/* Backup & Restore section */}
