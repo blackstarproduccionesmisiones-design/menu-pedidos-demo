@@ -18,6 +18,23 @@ export const HeaderBanner: React.FC<HeaderBannerProps> = ({
 
   return (
     <header className="relative w-full bg-white border-b border-stone-200">
+      {store.showAnnouncement &&
+        (store.announcementText?.trim() || store.announcementDiscount?.trim()) && (
+          <div className="w-full bg-red-600 text-white shadow-sm">
+            <div className="max-w-4xl mx-auto px-4 py-2.5 flex items-center justify-center gap-3 text-center">
+              {store.announcementDiscount?.trim() && (
+                <span className="shrink-0 rounded-md bg-white px-2.5 py-1 text-xs font-black uppercase tracking-wide text-red-600 shadow-sm">
+                  {store.announcementDiscount}
+                </span>
+              )}
+              {store.announcementText?.trim() && (
+                <p className="text-xs sm:text-sm font-bold leading-snug">
+                  {store.announcementText}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       {/* Cover Image Container */}
       <div className="relative h-44 sm:h-56 w-full overflow-hidden bg-stone-900">
         <img
